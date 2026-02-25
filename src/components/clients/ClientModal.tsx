@@ -33,8 +33,10 @@ const modalVariants = {
 
 export default function ClientModal({ open, onClose, onSaved, client }: ClientModalProps) {
   const activeConfig = useAppStore((s) => s.getActiveConfig());
+  const activeUnit = useAppStore((s) => s.activeUnit);
 
   const isEditing = !!client;
+  const isBuLocked = activeUnit !== 'all' && !isEditing;
 
   const [businessUnits, setBusinessUnits] = useState<BusinessUnit[]>([]);
   const [saving, setSaving] = useState(false);
@@ -53,6 +55,14 @@ export default function ClientModal({ open, onClose, onSaved, client }: ClientMo
     getBusinessUnits().then(setBusinessUnits).catch(console.error);
   }, []);
 
+  // Auto-assign BU from Master Switch context
+  useEffect(() => {
+    if (isBuLocked && businessUnits.length > 0) {
+      const matchBu = businessUnits.find((bu) => bu.slug === activeUnit);
+      if (matchBu) setBusinessUnitId(matchBu.id);
+    }
+  }, [isBuLocked, activeUnit, businessUnits]);
+
   // Populate form when editing
   useEffect(() => {
     if (client) {
@@ -68,7 +78,13 @@ export default function ClientModal({ open, onClose, onSaved, client }: ClientMo
       setPhone('');
       setCompany('');
       setNotes('');
-      setBusinessUnitId('');
+      // Auto-set BU if locked
+      if (isBuLocked && businessUnits.length > 0) {
+        const matchBu = businessUnits.find((bu) => bu.slug === activeUnit);
+        if (matchBu) setBusinessUnitId(matchBu.id);
+      } else {
+        setBusinessUnitId('');
+      }
     }
     setError(null);
   }, [client, open]);
@@ -187,26 +203,40 @@ export default function ClientModal({ open, onClose, onSaved, client }: ClientMo
                   <Building2 size={12} />
                   Unidad de Negocio *
                 </label>
-                <div className="relative">
-                  <select
-                    value={businessUnitId}
-                    onChange={(e) => setBusinessUnitId(e.target.value)}
-                    className="glass w-full appearance-none rounded-xl px-4 py-3 pr-10 text-sm text-text-primary outline-none focus:border-white/20"
-                  >
-                    <option value="" className="bg-surface-2">
-                      Seleccionar...
-                    </option>
-                    {businessUnits.map((bu) => (
-                      <option key={bu.id} value={bu.id} className="bg-surface-2">
-                        {bu.name}
+                {isBuLocked ? (
+                  /* Locked: auto-assigned from Master Switch */
+                  <div className="glass flex items-center gap-2 rounded-xl px-4 py-3 text-sm">
+                    <div
+                      className="h-2 w-2 rounded-full"
+                      style={{ backgroundColor: activeConfig.color }}
+                    />
+                    <span className="font-medium text-text-primary">
+                      {activeConfig.label}
+                    </span>
+                    <span className="ml-auto text-[10px] text-text-tertiary">Auto-asignado</span>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <select
+                      value={businessUnitId}
+                      onChange={(e) => setBusinessUnitId(e.target.value)}
+                      className="glass w-full appearance-none rounded-xl px-4 py-3 pr-10 text-sm text-text-primary outline-none focus:border-white/20"
+                    >
+                      <option value="" className="bg-surface-2">
+                        Seleccionar...
                       </option>
-                    ))}
-                  </select>
-                  <ChevronDown
-                    size={14}
-                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary"
-                  />
-                </div>
+                      {businessUnits.map((bu) => (
+                        <option key={bu.id} value={bu.id} className="bg-surface-2">
+                          {bu.name}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      size={14}
+                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary"
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Email & Phone row */}
