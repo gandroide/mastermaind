@@ -3,9 +3,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '@/lib/store';
-import { createInventoryItem, updateInventoryItem, uploadInventoryFile } from '@/services/inventory';
+import { createInventoryItem, updateInventoryItem, uploadInventoryFile, createPublicInventoryItem } from '@/services/inventory';
 import { getBusinessUnits } from '@/services/business-units';
 import type { InventoryItem, BusinessUnit, CreateInventoryPayload } from '@/types/database';
+import { getDictionary, type AppLanguage } from '@/utils/dictionaries';
 import {
   X, Loader2, Package, ChevronDown, Upload, FileCheck, AlertCircle, Image, FileText, MapPin,
 } from 'lucide-react';
@@ -15,6 +16,8 @@ interface Props {
   onClose: () => void;
   onSaved: () => void;
   item?: InventoryItem | null;
+  isPartnerMode?: boolean;
+  lang?: AppLanguage | null;
 }
 
 const overlayVariants = { hidden: { opacity: 0 }, visible: { opacity: 1 } };
@@ -26,11 +29,14 @@ const modalVariants = {
 
 const LOCATION_OPTIONS = ['Dominicana', 'Portugal', 'Argentina'];
 
-export default function InventoryModal({ open, onClose, onSaved, item }: Props) {
+export default function InventoryModal({ open, onClose, onSaved, item, isPartnerMode = false, lang = 'es' }: Props) {
   const activeConfig = useAppStore((s) => s.getActiveConfig());
   const activeUnit = useAppStore((s) => s.activeUnit);
   const isEditing = !!item;
-  const isBuLocked = activeUnit !== 'all' && !isEditing;
+  // Partner mode is fundamentally locked, it ignores standard activeUnit logic
+  const isBuLocked = (activeUnit !== 'all' && !isEditing) || isPartnerMode;
+  
+  const dict = getDictionary(lang);
 
   const [businessUnits, setBusinessUnits] = useState<BusinessUnit[]>([]);
   const [saving, setSaving] = useState(false);
@@ -123,23 +129,38 @@ export default function InventoryModal({ open, onClose, onSaved, item }: Props) 
 
     setSaving(true);
     try {
-      const payload: CreateInventoryPayload = {
-        business_unit_id: businessUnitId,
-        item_name: itemName.trim(),
-        sku: sku.trim() || undefined,
-        category: category.trim() || undefined,
-        quantity: parseInt(quantity),
-        location: location || undefined,
-        description: description.trim() || undefined,
-        image_url: imageUrl || undefined,
-        schematic_url: schematicUrl || undefined,
-        notes: notes.trim() || undefined,
-      };
-
-      if (isEditing) {
-        await updateInventoryItem({ id: item.id, ...payload });
+      if (isPartnerMode) {
+        // Partners can only create items
+        const publicPayload: Omit<CreateInventoryPayload, 'business_unit_id'> = {
+          item_name: itemName.trim(),
+          sku: sku.trim() || undefined,
+          category: category.trim() || undefined,
+          quantity: parseInt(quantity),
+          location: location || undefined,
+          description: description.trim() || undefined,
+          image_url: imageUrl || undefined,
+          schematic_url: schematicUrl || undefined,
+          notes: notes.trim() || undefined,
+        };
+        await createPublicInventoryItem(publicPayload);
       } else {
-        await createInventoryItem(payload);
+        const payload: CreateInventoryPayload = {
+          business_unit_id: businessUnitId,
+          item_name: itemName.trim(),
+          sku: sku.trim() || undefined,
+          category: category.trim() || undefined,
+          quantity: parseInt(quantity),
+          location: location || undefined,
+          description: description.trim() || undefined,
+          image_url: imageUrl || undefined,
+          schematic_url: schematicUrl || undefined,
+          notes: notes.trim() || undefined,
+        };
+        if (isEditing) {
+          await updateInventoryItem({ id: item.id, ...payload });
+        } else {
+          await createInventoryItem(payload);
+        }
       }
       onSaved();
     } catch (err) {
@@ -156,7 +177,8 @@ export default function InventoryModal({ open, onClose, onSaved, item }: Props) 
     accept: string,
     onFile: (f: File) => void,
     url: string,
-    onClear: () => void
+    onClear: () => void,
+    dict: Record<string, string>
   ) => (
     <div>
       <label className="mb-1.5 flex items-center gap-2 text-xs font-medium text-text-secondary">
@@ -194,7 +216,7 @@ export default function InventoryModal({ open, onClose, onSaved, item }: Props) 
         >
           <Upload size={20} className="mx-auto mb-1.5 text-text-tertiary" />
           <p className="text-sm text-text-secondary">
-            <span style={{ color: activeConfig.color }} className="font-medium">Seleccionar archivo</span>
+            <span style={{ color: activeConfig.color }} className="font-medium">{dict.uploadFile}</span>
           </p>
           {status === 'error' && (
             <p className="mt-1 flex items-center justify-center gap-1 text-xs text-red-400">
@@ -220,7 +242,7 @@ export default function InventoryModal({ open, onClose, onSaved, item }: Props) 
             {/* Header */}
             <div className="flex items-center justify-between border-b border-white/[0.06] px-6 py-4">
               <div>
-                <h3 className="text-base font-bold text-text-primary">{isEditing ? 'Editar Ítem' : 'Nuevo Ítem'}</h3>
+                <h3 className="text-base font-bold text-text-primary">{isEditing ? 'Editar Ítem' : dict.newItem}</h3>
                 <p className="text-xs text-text-tertiary">Inventario técnico distribuido</p>
               </div>
               <button onClick={onClose} className="touch-target flex items-center justify-center rounded-xl p-2 text-text-tertiary hover:bg-white/5 hover:text-text-primary">
@@ -233,40 +255,42 @@ export default function InventoryModal({ open, onClose, onSaved, item }: Props) 
 
               {/* Name */}
               <div>
-                <label className="mb-1.5 flex items-center gap-2 text-xs font-medium text-text-secondary"><Package size={12} />Nombre del ítem *</label>
+                <label className="mb-1.5 flex items-center gap-2 text-xs font-medium text-text-secondary"><Package size={12} />{dict.itemName} *</label>
                 <input type="text" value={itemName} onChange={(e) => setItemName(e.target.value)}
                   placeholder="ESP32-WROOM-32..." className="glass w-full rounded-xl px-4 py-3 text-sm text-text-primary outline-none placeholder:text-text-tertiary focus:border-white/20" autoFocus />
               </div>
 
               {/* BU */}
-              <div>
-                <label className="mb-1.5 text-xs font-medium text-text-secondary">Unidad de Negocio *</label>
-                {isBuLocked ? (
-                  <div className="glass flex items-center gap-2 rounded-xl px-4 py-3 text-sm">
-                    <div className="h-2 w-2 rounded-full" style={{ backgroundColor: activeConfig.color }} />
-                    <span className="font-medium text-text-primary">{activeConfig.label}</span>
-                    <span className="ml-auto text-[10px] text-text-tertiary">Auto-asignado</span>
-                  </div>
-                ) : (
-                  <div className="relative">
-                    <select value={businessUnitId} onChange={(e) => setBusinessUnitId(e.target.value)}
-                      className="glass w-full appearance-none rounded-xl px-4 py-3 pr-10 text-sm text-text-primary outline-none">
-                      <option value="" className="bg-surface-2">Seleccionar...</option>
-                      {businessUnits.map((bu) => <option key={bu.id} value={bu.id} className="bg-surface-2">{bu.name}</option>)}
-                    </select>
-                    <ChevronDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary" />
-                  </div>
-                )}
-              </div>
+              {!isPartnerMode && (
+                <div>
+                  <label className="mb-1.5 text-xs font-medium text-text-secondary">Unidad de Negocio *</label>
+                  {isBuLocked ? (
+                    <div className="glass flex items-center gap-2 rounded-xl px-4 py-3 text-sm">
+                      <div className="h-2 w-2 rounded-full" style={{ backgroundColor: activeConfig.color }} />
+                      <span className="font-medium text-text-primary">{activeConfig.label}</span>
+                      <span className="ml-auto text-[10px] text-text-tertiary">Auto-asignado</span>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <select value={businessUnitId} onChange={(e) => setBusinessUnitId(e.target.value)}
+                        className="glass w-full appearance-none rounded-xl px-4 py-3 pr-10 text-sm text-text-primary outline-none">
+                        <option value="" className="bg-surface-2">{dict.select}</option>
+                        {businessUnits.map((bu) => <option key={bu.id} value={bu.id} className="bg-surface-2">{bu.name}</option>)}
+                      </select>
+                      <ChevronDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary" />
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Category + SKU */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-1.5 text-xs font-medium text-text-secondary">Categoría</label>
+                  <label className="mb-1.5 text-xs font-medium text-text-secondary">{dict.itemCategory}</label>
                   <div className="relative">
                     <select value={category} onChange={(e) => setCategory(e.target.value)}
                       className="glass w-full cursor-pointer appearance-none rounded-xl px-4 py-3 pr-10 text-sm text-text-primary outline-none">
-                      <option value="" className="bg-surface-2">Seleccionar...</option>
+                      <option value="" className="bg-surface-2">{dict.select}</option>
                       <option value="Componente Electrónico" className="bg-surface-2">Componente Electrónico</option>
                       <option value="Sensor" className="bg-surface-2">Sensor</option>
                       <option value="Accesorio" className="bg-surface-2">Accesorio</option>
@@ -285,16 +309,16 @@ export default function InventoryModal({ open, onClose, onSaved, item }: Props) 
               {/* Quantity + Location */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-1.5 text-xs font-medium text-text-secondary">Cantidad (unidades) *</label>
+                  <label className="mb-1.5 text-xs font-medium text-text-secondary">{dict.quantityUnits} *</label>
                   <input type="number" min="0" step="1" value={quantity} onChange={(e) => setQuantity(e.target.value)}
                     placeholder="0" className="glass w-full rounded-xl px-4 py-3 text-sm text-text-primary outline-none placeholder:text-text-tertiary" />
                 </div>
                 <div>
-                  <label className="mb-1.5 flex items-center gap-2 text-xs font-medium text-text-secondary"><MapPin size={12} />Ubicación</label>
+                  <label className="mb-1.5 flex items-center gap-2 text-xs font-medium text-text-secondary"><MapPin size={12} />{dict.location}</label>
                   <div className="relative">
                     <select value={location} onChange={(e) => setLocation(e.target.value)}
                       className="glass w-full appearance-none rounded-xl px-4 py-3 pr-10 text-sm text-text-primary outline-none">
-                      <option value="" className="bg-surface-2">Seleccionar...</option>
+                      <option value="" className="bg-surface-2">{dict.select}</option>
                       {LOCATION_OPTIONS.map((l) => <option key={l} value={l} className="bg-surface-2">{l}</option>)}
                     </select>
                     <ChevronDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary" />
@@ -304,26 +328,26 @@ export default function InventoryModal({ open, onClose, onSaved, item }: Props) 
 
               {/* Description */}
               <div>
-                <label className="mb-1.5 text-xs font-medium text-text-secondary">Descripción Técnica</label>
+                <label className="mb-1.5 text-xs font-medium text-text-secondary">{dict.technicalDescription}</label>
                 <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3}
                   placeholder="Especificaciones, voltajes, conexiones..." className="glass w-full resize-none rounded-xl px-4 py-3 text-sm text-text-primary outline-none placeholder:text-text-tertiary" />
               </div>
 
               {/* Image upload */}
-              {renderUploadZone('Imagen de Referencia', <Image size={12} />, imageUpload, imageFileName,
+              {renderUploadZone(dict.imageRef, <Image size={12} />, imageUpload, imageFileName,
                 imageInputRef, 'image/*', handleImageUpload, imageUrl,
-                () => { setImageUrl(''); setImageUpload('idle'); setImageFileName(''); })}
+                () => { setImageUrl(''); setImageUpload('idle'); setImageFileName(''); }, dict)}
 
               {/* Schematic upload */}
-              {renderUploadZone('Esquema Eléctrico', <FileText size={12} />, schematicUpload, schematicFileName,
+              {renderUploadZone(dict.schematicRef, <FileText size={12} />, schematicUpload, schematicFileName,
                 schematicInputRef, 'image/*,.pdf', handleSchematicUpload, schematicUrl,
-                () => { setSchematicUrl(''); setSchematicUpload('idle'); setSchematicFileName(''); })}
+                () => { setSchematicUrl(''); setSchematicUpload('idle'); setSchematicFileName(''); }, dict)}
 
               {/* Notes */}
               <div>
-                <label className="mb-1.5 text-xs font-medium text-text-secondary">Notas</label>
+                <label className="mb-1.5 text-xs font-medium text-text-secondary">{dict.notes}</label>
                 <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2}
-                  placeholder="Notas adicionales..." className="glass w-full resize-none rounded-xl px-4 py-3 text-sm text-text-primary outline-none placeholder:text-text-tertiary" />
+                  placeholder="..." className="glass w-full resize-none rounded-xl px-4 py-3 text-sm text-text-primary outline-none placeholder:text-text-tertiary" />
               </div>
 
               {/* Actions */}
@@ -333,7 +357,7 @@ export default function InventoryModal({ open, onClose, onSaved, item }: Props) 
                   className="touch-target flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold text-text-inverse transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60"
                   style={{ background: `linear-gradient(135deg, ${activeConfig.color}, ${activeConfig.color}cc)` }}>
                   {saving && <Loader2 size={16} className="animate-spin" />}
-                  {isEditing ? 'Guardar' : 'Crear Ítem'}
+                  {isEditing ? 'Guardar' : dict.createItem}
                 </button>
               </div>
             </form>

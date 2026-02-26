@@ -31,11 +31,13 @@ export default function ShareModal({ blueprint, onClose, onUpdated }: Props) {
   const [customPin, setCustomPin] = useState('');
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [showPin, setShowPin] = useState(false);
+  const [shareLang, setShareLang] = useState<'es' | 'pt'>('es');
 
   const isActive = !!shareToken;
-  const shareUrl = typeof window !== 'undefined'
+  const baseUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/share/blueprint/${shareToken}`
     : '';
+  const shareUrl = shareLang === 'pt' ? `${baseUrl}?lang=pt` : baseUrl;
 
   const handleEnable = async () => {
     setLoading(true);
@@ -147,9 +149,29 @@ export default function ShareModal({ blueprint, onClose, onUpdated }: Props) {
                 <span className="text-xs font-semibold text-emerald-400">Enlace activo</span>
               </div>
 
-              {/* URL */}
+              {/* URL & Lang */}
               <div>
-                <label className="mb-1.5 text-xs font-medium text-text-secondary">Enlace</label>
+                <div className="mb-1.5 flex items-center justify-between">
+                  <label className="text-xs font-medium text-text-secondary">Enlace</label>
+                  <div className="flex items-center gap-1 rounded-md bg-white/5 p-0.5">
+                    <button
+                      onClick={() => setShareLang('es')}
+                      className={`rounded px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors ${
+                        shareLang === 'es' ? 'bg-white/10 text-white' : 'text-text-tertiary hover:text-text-secondary'
+                      }`}
+                    >
+                      ES
+                    </button>
+                    <button
+                      onClick={() => setShareLang('pt')}
+                      className={`rounded px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors ${
+                        shareLang === 'pt' ? 'bg-white/10 text-white' : 'text-text-tertiary hover:text-text-secondary'
+                      }`}
+                    >
+                      PT
+                    </button>
+                  </div>
+                </div>
                 <div className="glass flex items-center gap-2 rounded-xl px-3 py-2.5">
                   <p className="flex-1 truncate text-xs font-mono text-text-secondary">{shareUrl}</p>
                   <button onClick={() => copyToClipboard(shareUrl, 'url')}

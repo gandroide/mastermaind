@@ -10,6 +10,8 @@ export interface BusinessUnit {
   color: string;
   icon: string;
   is_active: boolean;
+  inventory_share_token: string | null;
+  inventory_share_pin: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -153,7 +155,9 @@ export interface ClientCardData {
 export interface Blueprint {
   id: string;
   name: string;
+  name_pt: string | null;
   description: string | null;
+  description_pt: string | null;
   cover_image: string | null;
   share_token: string | null;
   share_pin: string | null;
@@ -167,7 +171,9 @@ export interface BlueprintPhase {
   blueprint_id: string;
   phase_number: number;
   title: string;
+  title_pt: string | null;
   content_markdown: string | null;
+  content_pt: string | null;
   created_at: string;
   updated_at: string;
 }

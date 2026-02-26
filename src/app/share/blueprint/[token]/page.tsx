@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { verifySharePin, getPublicBlueprint } from '@/services/blueprints';
+import { getDictionary, type AppLanguage } from '@/utils/dictionaries';
 import type { BlueprintWithDetails, BlueprintMaterial, BlueprintPhase } from '@/types/database';
 import SchematicViewerModal from '@/components/inventory/SchematicViewerModal';
 import {
@@ -33,7 +34,10 @@ type ViewState = 'loading' | 'not_found' | 'pin' | 'unlocked';
 
 export default function ShareBlueprintPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const token = params.token as string;
+  const lang = searchParams.get('lang') as AppLanguage | null;
+  const dict = getDictionary(lang);
 
   const [viewState, setViewState] = useState<ViewState>('loading');
   const [blueprint, setBlueprint] = useState<BlueprintWithDetails | null>(null);
@@ -162,9 +166,9 @@ export default function ShareBlueprintPage() {
           <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/5">
             <Lock size={28} className="text-text-tertiary" />
           </div>
-          <h1 className="text-lg font-bold text-text-primary">Acceso Protegido</h1>
+          <h1 className="text-lg font-bold text-text-primary">{dict.pinRequired}</h1>
           <p className="mt-2 text-sm text-text-secondary">
-            Ingresa el PIN de 6 dígitos para acceder a la documentación técnica
+            {dict.enterPin}
           </p>
 
           {/* PIN inputs */}
@@ -193,14 +197,14 @@ export default function ShareBlueprintPage() {
           {pinError && (
             <motion.p className="mt-3 text-xs font-medium text-danger"
               initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}>
-              PIN incorrecto. Inténtalo de nuevo.
+              {dict.invalidPin}
             </motion.p>
           )}
 
           {verifying && (
             <div className="mt-4 flex items-center justify-center gap-2 text-xs text-text-tertiary">
               <Loader2 size={14} className="animate-spin" />
-              Verificando...
+              {dict.loading}
             </div>
           )}
 
@@ -226,9 +230,13 @@ export default function ShareBlueprintPage() {
           <BookOpen size={20} className="text-accent-bioalert" />
           <span className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">Documentación Técnica</span>
         </div>
-        <h1 className="text-2xl font-bold tracking-tight text-text-primary">{blueprint.name}</h1>
-        {blueprint.description && (
-          <p className="mt-1 text-sm text-text-secondary">{blueprint.description}</p>
+        <h1 className="text-2xl font-bold tracking-tight text-text-primary">
+          {lang === 'pt' && blueprint.name_pt ? blueprint.name_pt : blueprint.name}
+        </h1>
+        {((lang === 'pt' && blueprint.description_pt) || blueprint.description) && (
+          <p className="mt-1 text-sm text-text-secondary">
+            {lang === 'pt' && blueprint.description_pt ? blueprint.description_pt : blueprint.description}
+          </p>
         )}
       </motion.div>
 
@@ -244,7 +252,7 @@ export default function ShareBlueprintPage() {
               }`}
               style={isActive ? { background: `${phase.color}15`, border: `1px solid ${phase.color}30` } : { background: 'rgba(255,255,255,0.03)' }}>
               <Icon size={14} style={{ color: isActive ? phase.color : undefined }} />
-              <span className="hidden sm:inline">Fase {phase.number}</span>
+              <span className="hidden sm:inline">{dict.phase} {phase.number}</span>
             </button>
           );
         })}
@@ -269,8 +277,12 @@ export default function ShareBlueprintPage() {
                       <Icon size={14} style={{ color: isActive ? phase.color : 'var(--color-text-tertiary)' }} />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[10px] uppercase tracking-wider text-text-tertiary">Fase {phase.number}</p>
-                      <p className="truncate text-xs">{phase.title}</p>
+                      <p className="text-[10px] uppercase tracking-wider text-text-tertiary">{dict.phase} {phase.number}</p>
+                      <p className="truncate text-xs">
+                        {lang === 'pt' && blueprint.phases.find(p => p.phase_number === phase.number)?.title_pt
+                          ? blueprint.phases.find(p => p.phase_number === phase.number)?.title_pt
+                          : phase.title}
+                      </p>
                     </div>
                   </button>
                   {!isLast && <div className="ml-[22px] h-2 w-px bg-white/[0.08]" />}
@@ -293,8 +305,10 @@ export default function ShareBlueprintPage() {
                     {(() => { const Icon = currentPhaseDef.icon; return <Icon size={18} style={{ color: currentPhaseDef.color }} />; })()}
                   </div>
                   <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">Fase {activePhase}</p>
-                    <h3 className="text-base font-bold text-text-primary">{currentPhaseDef.title}</h3>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">{dict.phase} {activePhase}</p>
+                    <h3 className="text-base font-bold text-text-primary">
+                      {lang === 'pt' && currentPhase?.title_pt ? currentPhase.title_pt : currentPhaseDef.title}
+                    </h3>
                   </div>
                 </div>
               </div>
@@ -302,9 +316,9 @@ export default function ShareBlueprintPage() {
               {/* Phase content */}
               <div className="p-5">
                 {activePhase === 1 ? (
-                  <PublicBOMView materials={blueprint.materials} />
+                  <PublicBOMView materials={blueprint.materials} dict={dict} />
                 ) : (
-                  <PublicDocView phase={currentPhase ?? null} />
+                  <PublicDocView phase={currentPhase ?? null} dict={dict} lang={lang} />
                 )}
               </div>
             </motion.div>
@@ -333,12 +347,12 @@ export default function ShareBlueprintPage() {
 // Public BOM View — RESTRICTED: no stock, no prices, no inventory links
 // ══════════════════════════════════════
 
-function PublicBOMView({ materials }: { materials: BlueprintMaterial[] }) {
+function PublicBOMView({ materials, dict }: { materials: BlueprintMaterial[], dict: any }) {
   if (materials.length === 0) {
     return (
       <div className="flex flex-col items-center py-10 text-center">
         <Package size={40} className="mb-3 text-text-tertiary" />
-        <p className="text-sm text-text-secondary">Sin materiales registrados</p>
+        <p className="text-sm text-text-secondary">{dict.noMaterials}</p>
       </div>
     );
   }
@@ -353,8 +367,8 @@ function PublicBOMView({ materials }: { materials: BlueprintMaterial[] }) {
           <thead>
             <tr className="border-b border-white/[0.06]">
               <th className="pb-2 pr-4 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">Componente</th>
-              <th className="pb-2 pr-4 text-center text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">Qty Necesaria</th>
-              <th className="pb-2 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">Notas</th>
+              <th className="pb-2 pr-4 text-center text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">{dict.quantityNeeded}</th>
+              <th className="pb-2 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">{dict.notes}</th>
             </tr>
           </thead>
           <tbody>
@@ -387,8 +401,12 @@ function PublicBOMView({ materials }: { materials: BlueprintMaterial[] }) {
 // Public Documentation View — Read-only
 // ══════════════════════════════════════
 
-function PublicDocView({ phase }: { phase: BlueprintPhase | null }) {
-  if (!phase?.content_markdown) {
+function PublicDocView({ phase, dict, lang }: { phase: BlueprintPhase | null, dict: any, lang: string | null }) {
+  const isPt = lang === 'pt';
+  const hasPtContent = !!phase?.content_pt?.trim();
+  const contentToRender = (isPt && hasPtContent) ? phase?.content_pt : phase?.content_markdown;
+
+  if (!contentToRender) {
     return (
       <div className="flex flex-col items-center py-10 text-center">
         <FileText size={40} className="mb-3 text-text-tertiary" />
@@ -397,24 +415,31 @@ function PublicDocView({ phase }: { phase: BlueprintPhase | null }) {
     );
   }
 
-  const html = markdownToHtml(phase.content_markdown);
+  const html = markdownToHtml(contentToRender);
   return (
-    <div
-      className="prose prose-invert prose-sm max-w-none
-        prose-headings:text-text-primary prose-headings:font-bold prose-headings:tracking-tight
-        prose-h2:text-lg prose-h2:mt-0 prose-h2:mb-4 prose-h2:pb-2 prose-h2:border-b prose-h2:border-white/[0.06]
-        prose-h3:text-sm prose-h3:mt-6 prose-h3:mb-2
-        prose-p:text-text-secondary prose-p:leading-relaxed
-        prose-strong:text-text-primary
-        prose-code:rounded prose-code:bg-white/5 prose-code:px-1.5 prose-code:py-0.5 prose-code:text-accent-bioalert prose-code:text-xs
-        prose-pre:rounded-xl prose-pre:bg-surface-2 prose-pre:border prose-pre:border-white/[0.06]
-        prose-table:text-xs
-        prose-th:border-b prose-th:border-white/[0.06] prose-th:px-3 prose-th:py-2 prose-th:text-left prose-th:text-text-tertiary
-        prose-td:border-b prose-td:border-white/[0.04] prose-td:px-3 prose-td:py-2 prose-td:text-text-secondary
-        prose-li:text-text-secondary prose-li:text-sm
-        prose-blockquote:border-l-accent-bioalert/40 prose-blockquote:text-text-secondary prose-blockquote:bg-white/[0.02] prose-blockquote:rounded-r-lg prose-blockquote:py-2 prose-blockquote:px-4"
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <div>
+      {isPt && !hasPtContent && !!phase?.content_markdown && (
+        <div className="mb-6 rounded-xl border border-orange-500/20 bg-orange-500/10 px-4 py-3 text-xs font-medium text-orange-400">
+          (Tradução pendente) Exibindo conteúdo original em espanhol.
+        </div>
+      )}
+      <div
+        className="prose prose-invert prose-sm max-w-none
+          prose-headings:text-text-primary prose-headings:font-bold prose-headings:tracking-tight
+          prose-h2:text-lg prose-h2:mt-0 prose-h2:mb-4 prose-h2:pb-2 prose-h2:border-b prose-h2:border-white/[0.06]
+          prose-h3:text-sm prose-h3:mt-6 prose-h3:mb-2
+          prose-p:text-text-secondary prose-p:leading-relaxed
+          prose-strong:text-text-primary
+          prose-code:rounded prose-code:bg-white/5 prose-code:px-1.5 prose-code:py-0.5 prose-code:text-accent-bioalert prose-code:text-xs
+          prose-pre:rounded-xl prose-pre:bg-surface-2 prose-pre:border prose-pre:border-white/[0.06]
+          prose-table:text-xs
+          prose-th:border-b prose-th:border-white/[0.06] prose-th:px-3 prose-th:py-2 prose-th:text-left prose-th:text-text-tertiary
+          prose-td:border-b prose-td:border-white/[0.04] prose-td:px-3 prose-td:py-2 prose-td:text-text-secondary
+          prose-li:text-text-secondary prose-li:text-sm
+          prose-blockquote:border-l-accent-bioalert/40 prose-blockquote:text-text-secondary prose-blockquote:bg-white/[0.02] prose-blockquote:rounded-r-lg prose-blockquote:py-2 prose-blockquote:px-4"
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    </div>
   );
 }
 

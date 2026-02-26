@@ -15,7 +15,6 @@ import {
   MoreVertical,
   Pencil,
   Trash2,
-  FileText,
   ExternalLink,
   Loader2,
   X,
@@ -63,6 +62,12 @@ export default function InventoryPage() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [partnerLinksOpen, setPartnerLinksOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
+  
+  // Security
+  const [securityPin, setSecurityPin] = useState('');
+  const [selectedLang, setSelectedLang] = useState('pt');
+  const [savingPin, setSavingPin] = useState(false);
+  
   const [schematicViewer, setSchematicViewer] = useState<{ url: string; title: string } | null>(null);
   const [viewingItem, setViewingItem] = useState<InventoryItem | null>(null);
 
@@ -154,6 +159,22 @@ export default function InventoryPage() {
 
   const handleModalClose = () => { setModalOpen(false); setEditingItem(null); };
   const handleSaved = () => { handleModalClose(); fetchItems(); };
+
+  const handleSavePin = async () => {
+    if (!securityPin || securityPin.length < 4) return;
+    setSavingPin(true);
+    try {
+      // Lazy import to keep top-level clean since this file is already big
+      const { setInventorySharePin } = await import('@/services/inventory');
+      await setInventorySharePin('bio-alert', securityPin);
+      alert('PIN actualizado en Bio-Alert con éxito');
+    } catch (err) {
+      console.error(err);
+      alert('Error al guardar el PIN');
+    } finally {
+      setSavingPin(false);
+    }
+  };
 
   return (
     <div className="mx-auto max-w-7xl">
@@ -448,7 +469,7 @@ export default function InventoryPage() {
         )}
       </AnimatePresence>
 
-      {/* Partner Links Modal */}
+      {/* Detalle modal UI here if needed */}
       <AnimatePresence>
         {partnerLinksOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -459,16 +480,15 @@ export default function InventoryPage() {
             />
             <motion.div
               className="glass relative z-10 w-full max-w-md rounded-3xl border border-white/[0.08]"
-              style={{ boxShadow: `0 0 60px ${activeConfig.color}10, 0 25px 50px rgba(0,0,0,0.5)` }}
+              style={{ boxShadow: `0 0 60px #10b98110, 0 25px 50px rgba(0,0,0,0.5)` }}
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 25 } }}
               exit={{ opacity: 0, scale: 0.95, y: 20, transition: { duration: 0.15 } }}
             >
-              {/* Header */}
               <div className="flex items-center justify-between border-b border-white/[0.06] px-6 py-4">
                 <div>
                   <h3 className="text-base font-bold text-text-primary">Accesos de Socios</h3>
-                  <p className="text-xs text-text-tertiary">Comparte estos enlaces con tus socios</p>
+                  <p className="text-xs text-text-tertiary">Controla los enlaces compartidos</p>
                 </div>
                 <button onClick={() => setPartnerLinksOpen(false)}
                   className="touch-target flex items-center justify-center rounded-xl p-2 text-text-tertiary hover:bg-white/5 hover:text-text-primary">
@@ -476,65 +496,81 @@ export default function InventoryPage() {
                 </button>
               </div>
 
-              {/* Links */}
-              <div className="space-y-2 p-6">
-                {PORTAL_LINKS.map((link) => {
-                  const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/portal/inventory?token=${link.token}`;
-                  const isCopied = copiedLink === link.token;
-
-                  return (
-                    <div key={link.token}
-                      className="glass flex items-center gap-3 rounded-xl px-4 py-3">
-                      <span className="text-lg">{link.flag}</span>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-text-primary">{link.location}</p>
-                        <p className="truncate text-[11px] font-mono text-text-tertiary">{url}</p>
-                      </div>
-                      <button
-                        onClick={() => {
-                          const doCopy = () => {
-                            // Modern API (works in Chrome, may fail in Safari)
-                            if (navigator.clipboard && navigator.clipboard.writeText) {
-                              return navigator.clipboard.writeText(url);
-                            }
-                            return Promise.reject();
-                          };
-
-                          doCopy()
-                            .then(() => {
-                              setCopiedLink(link.token);
-                              setTimeout(() => setCopiedLink(null), 2000);
-                            })
-                            .catch(() => {
-                              // Fallback: textarea + execCommand (iOS Safari safe)
-                              const ta = document.createElement('textarea');
-                              ta.value = url;
-                              ta.style.position = 'fixed';
-                              ta.style.left = '-9999px';
-                              ta.style.top = '-9999px';
-                              ta.style.opacity = '0';
-                              document.body.appendChild(ta);
-                              ta.focus();
-                              ta.select();
-                              try {
-                                document.execCommand('copy');
-                                setCopiedLink(link.token);
-                                setTimeout(() => setCopiedLink(null), 2000);
-                              } catch { /* silent */ }
-                              document.body.removeChild(ta);
-                            });
-                        }}
-                        className={`flex min-h-[36px] min-w-[36px] cursor-pointer items-center justify-center rounded-lg transition-all ${
-                          isCopied
-                            ? 'bg-emerald-500/10 text-emerald-400'
-                            : 'text-text-tertiary hover:bg-white/5 hover:text-text-primary'
-                        }`}
-                      >
-                        {isCopied ? <Check size={16} /> : <Copy size={16} />}
-                      </button>
+              <div className="p-6 space-y-6">
+                {/* Security PIN Settings */}
+                <div className="rounded-2xl border border-white/5 bg-black/20 p-4">
+                  <h4 className="mb-3 text-sm font-semibold text-text-primary">1. Seguridad y Región</h4>
+                  
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <div className="flex-1">
+                      <label className="mb-1 block text-xs font-medium text-text-tertiary">PIN Maestro (Global)</label>
+                      <input 
+                        type="text" 
+                        maxLength={6}
+                        placeholder="Ej: 123456"
+                        value={securityPin} 
+                        onChange={(e) => setSecurityPin(e.target.value.replace(/\D/g, ''))} 
+                        className="w-full rounded-xl border border-white/[0.06] bg-black/40 px-3 py-2 text-sm font-mono tracking-widest text-text-primary outline-none focus:border-emerald-500/50" 
+                      />
                     </div>
-                  );
-                })}
+                    
+                    <div className="w-32">
+                      <label className="mb-1 block text-xs font-medium text-text-tertiary">Idioma Enlace</label>
+                      <select 
+                        value={selectedLang} 
+                        onChange={(e) => setSelectedLang(e.target.value)} 
+                        className="w-full rounded-xl border border-white/[0.06] bg-black/40 px-3 py-2 text-sm text-text-primary outline-none focus:border-emerald-500/50"
+                      >
+                        <option value="pt">Portugués</option>
+                        <option value="es">Español</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <button 
+                    onClick={handleSavePin}
+                    disabled={savingPin || !securityPin || securityPin.length < 4}
+                    className="mt-3 w-full rounded-xl bg-white/10 py-2.5 text-xs font-bold uppercase tracking-wider text-text-primary transition-colors hover:bg-white/15 disabled:opacity-50"
+                  >
+                    {savingPin ? <Loader2 size={16} className="mx-auto animate-spin" /> : 'Guardar PIN Maestro'}
+                  </button>
+                </div>
+
+                {/* Local Links */}
+                <div>
+                  <h4 className="mb-3 text-sm font-semibold text-text-primary">2. Enlaces Directos</h4>
+                  <div className="space-y-2">
+                    {PORTAL_LINKS.map((link) => {
+                      const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/share/inventory/${link.token}?lang=${selectedLang}`;
+                      const isCopied = copiedLink === link.token;
+
+                      return (
+                        <div key={link.token} className="glass flex items-center gap-3 rounded-xl px-4 py-3">
+                          <span className="text-lg">{link.flag}</span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-text-primary">{link.location}</p>
+                            <p className="truncate text-[11px] font-mono text-text-tertiary">{url}</p>
+                          </div>
+                          <button
+                            onClick={() => {
+                              if (navigator.clipboard) {
+                                navigator.clipboard.writeText(url).then(() => {
+                                  setCopiedLink(link.token);
+                                  setTimeout(() => setCopiedLink(null), 2000);
+                                });
+                              }
+                            }}
+                            className={`flex min-h-[36px] min-w-[36px] cursor-pointer items-center justify-center rounded-lg transition-all ${
+                              isCopied ? 'bg-emerald-500/10 text-emerald-400' : 'text-text-tertiary hover:bg-white/5 hover:text-text-primary'
+                            }`}
+                          >
+                            {isCopied ? <Check size={16} /> : <Copy size={16} />}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </motion.div>
           </div>

@@ -24,7 +24,7 @@ const NAV_ITEMS = [
   { href: '/finance',    label: 'Finance',     icon: WalletCards },
   { href: '/inventory',  label: 'Inventory',   icon: Package, showFor: ['all', 'bio-alert'] as string[] },
   { href: '/blueprints', label: 'Blueprints',  icon: BookOpen, showFor: ['all', 'bio-alert'] as string[] },
-  { href: '/tech-hub',   label: 'Tech Hub',    icon: Server },
+  // { href: '/tech-hub',   label: 'Tech Hub',    icon: Server },
 ];
 
 const sidebarVariants = {

@@ -54,7 +54,9 @@ export async function getBlueprintWithDetails(id: string): Promise<BlueprintWith
 
 export async function createBlueprint(payload: {
   name: string;
+  name_pt?: string;
   description?: string;
+  description_pt?: string;
   cover_image?: string;
 }): Promise<Blueprint> {
   const { data, error } = await supabase
@@ -93,10 +95,15 @@ export async function getBlueprintPhases(blueprintId: string): Promise<Blueprint
 
 // ── Phases — Update ──
 
-export async function updatePhaseContent(phaseId: string, content_markdown: string): Promise<void> {
+export async function updatePhaseContent(phaseId: string, payload: {
+  content_markdown?: string | null;
+  content_pt?: string | null;
+  title?: string;
+  title_pt?: string | null;
+}): Promise<void> {
   const { error } = await supabase
     .from('blueprint_phases')
-    .update({ content_markdown })
+    .update(payload)
     .eq('id', phaseId);
 
   if (error) throw error;

@@ -13,7 +13,7 @@ export const BUSINESS_UNITS: BusinessUnitConfig[] = [
   { id: 'all',       label: 'Global',    color: 'var(--color-accent-global)',   slug: 'global' },
   { id: 'brivex',    label: 'Brivex',    color: 'var(--color-accent-brivex)',   slug: 'brivex' },
   { id: 'bio-alert', label: 'Bio-Alert', color: 'var(--color-accent-bioalert)', slug: 'bio-alert' },
-  { id: 'tech-ops',  label: 'Tech Ops',  color: 'var(--color-accent-techops)',  slug: 'tech-ops' },
+  // { id: 'tech-ops',  label: 'Tech Ops',  color: 'var(--color-accent-techops)',  slug: 'tech-ops' },
 ];
 
 interface AppState {

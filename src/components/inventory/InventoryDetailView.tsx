@@ -4,14 +4,16 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { InventoryItem } from '@/types/database';
 import SchematicViewerModal from '@/components/inventory/SchematicViewerModal';
-import { X, Package, MapPin, ZoomIn, FileText } from 'lucide-react';
+import { X, Package, MapPin, ZoomIn, FileText, Minus, Plus } from 'lucide-react';
 
 interface Props {
   item: InventoryItem;
   onClose: () => void;
+  isPublic?: boolean;
+  onUpdateQuantity?: (id: string, newQty: number) => void;
 }
 
-export default function InventoryDetailView({ item, onClose }: Props) {
+export default function InventoryDetailView({ item, onClose, isPublic, onUpdateQuantity }: Props) {
   const [imageZoomed, setImageZoomed] = useState(false);
   const [schematicOpen, setSchematicOpen] = useState(false);
 
@@ -94,9 +96,30 @@ export default function InventoryDetailView({ item, onClose }: Props) {
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 <div className="glass rounded-xl px-4 py-3">
                   <p className="text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">Cantidad</p>
-                  <p className="mt-1 text-xl font-bold text-text-primary">
-                    {item.quantity} <span className="text-sm font-normal text-text-tertiary">uds</span>
-                  </p>
+                  
+                  {isPublic ? (
+                    <div className="mt-2 flex items-center justify-between rounded-lg bg-surface-1 p-1 outline outline-1 outline-white/5">
+                      <button
+                        onClick={() => onUpdateQuantity && onUpdateQuantity(item.id, Math.max(0, item.quantity - 1))}
+                        className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-md bg-white/5 text-text-secondary active:bg-white/10"
+                      >
+                        <Minus size={18} />
+                      </button>
+                      <span className="font-mono text-xl font-bold text-text-primary tabular-nums">
+                        {item.quantity}
+                      </span>
+                      <button
+                        onClick={() => onUpdateQuantity && onUpdateQuantity(item.id, item.quantity + 1)}
+                        className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-md bg-accent-bioalert/10 text-accent-bioalert active:bg-accent-bioalert/20"
+                      >
+                        <Plus size={18} />
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-xl font-bold text-text-primary">
+                      {item.quantity} <span className="text-sm font-normal text-text-tertiary">uds</span>
+                    </p>
+                  )}
                 </div>
                 {item.location && (
                   <div className="glass rounded-xl px-4 py-3">

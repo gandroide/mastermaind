@@ -314,8 +314,11 @@ function NewBlueprintModal({ onClose, onCreated, activeColor }: {
   activeColor: string;
 }) {
   const [name, setName] = useState('');
+  const [namePt, setNamePt] = useState('');
   const [description, setDescription] = useState('');
+  const [descriptionPt, setDescriptionPt] = useState('');
   const [coverImage, setCoverImage] = useState('');
+  const [langTab, setLangTab] = useState<'es' | 'pt'>('es');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -326,7 +329,9 @@ function NewBlueprintModal({ onClose, onCreated, activeColor }: {
     try {
       const bp = await createBlueprint({
         name: name.trim(),
+        name_pt: namePt.trim() || undefined,
         description: description.trim() || undefined,
+        description_pt: descriptionPt.trim() || undefined,
         cover_image: coverImage.trim() || undefined,
       });
       onCreated(bp);
@@ -356,22 +361,52 @@ function NewBlueprintModal({ onClose, onCreated, activeColor }: {
         <div className="space-y-4 p-6">
           {error && <div className="rounded-xl border border-danger/20 bg-danger/5 px-4 py-3 text-sm text-danger">{error}</div>}
 
-          <div>
-            <label className="mb-1.5 text-xs font-medium text-text-secondary">Nombre del Dispositivo *</label>
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)}
-              placeholder="Nodo Bio-Alert Health..."
-              className="glass w-full rounded-xl px-4 py-3 text-sm text-text-primary outline-none placeholder:text-text-tertiary" autoFocus />
+          {/* Lang Tabs */}
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setLangTab('es')}
+              className={`flex-1 rounded-lg py-2 text-xs font-bold uppercase tracking-wider transition-all ${langTab === 'es' ? 'bg-white/10 text-white shadow-sm' : 'bg-transparent text-text-tertiary hover:bg-white/5'}`}>
+              Español (ES)
+            </button>
+            <button type="button" onClick={() => setLangTab('pt')}
+              className={`flex-1 rounded-lg py-2 text-xs font-bold uppercase tracking-wider transition-all ${langTab === 'pt' ? 'bg-white/10 text-white shadow-sm' : 'bg-transparent text-text-tertiary hover:bg-white/5'}`}>
+              Português (PT)
+            </button>
           </div>
 
-          <div>
-            <label className="mb-1.5 text-xs font-medium text-text-secondary">Descripción</label>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3}
-              placeholder="Sensor multivariable para..."
-              className="glass w-full resize-none rounded-xl px-4 py-3 text-sm text-text-primary outline-none placeholder:text-text-tertiary" />
-          </div>
+          {langTab === 'es' ? (
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1.5 text-xs font-medium text-text-secondary">Nombre del Dispositivo (ES) *</label>
+                <input type="text" value={name} onChange={(e) => setName(e.target.value)}
+                  placeholder="Nodo Bio-Alert Health..."
+                  className="glass w-full rounded-xl px-4 py-3 text-sm text-text-primary outline-none placeholder:text-text-tertiary" autoFocus />
+              </div>
+              <div>
+                <label className="mb-1.5 text-xs font-medium text-text-secondary">Descripción (ES)</label>
+                <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3}
+                  placeholder="Sensor multivariable para..."
+                  className="glass w-full resize-none rounded-xl px-4 py-3 text-sm text-text-primary outline-none placeholder:text-text-tertiary" />
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1.5 text-xs font-medium text-text-secondary">Nombre del Dispositivo (PT)</label>
+                <input type="text" value={namePt} onChange={(e) => setNamePt(e.target.value)}
+                  placeholder="Nó Bio-Alert Health..."
+                  className="glass w-full rounded-xl px-4 py-3 text-sm text-text-primary outline-none placeholder:text-text-tertiary" autoFocus />
+              </div>
+              <div>
+                <label className="mb-1.5 text-xs font-medium text-text-secondary">Descripción (PT)</label>
+                <textarea value={descriptionPt} onChange={(e) => setDescriptionPt(e.target.value)} rows={3}
+                  placeholder="Sensor multivariável para..."
+                  className="glass w-full resize-none rounded-xl px-4 py-3 text-sm text-text-primary outline-none placeholder:text-text-tertiary" />
+              </div>
+            </div>
+          )}
 
           <div>
-            <label className="mb-1.5 text-xs font-medium text-text-secondary">Imagen de Portada (URL)</label>
+            <label className="mb-1.5 text-xs font-medium text-text-secondary">Imagen de Portada (URL compartida)</label>
             <input type="url" value={coverImage} onChange={(e) => setCoverImage(e.target.value)}
               placeholder="https://..."
               className="glass w-full rounded-xl px-4 py-3 text-sm text-text-primary outline-none placeholder:text-text-tertiary" />
@@ -644,21 +679,27 @@ function DocumentationView({ phase, isEditing, onSaved }: {
   isEditing: boolean;
   onSaved: () => void;
 }) {
-  const [draft, setDraft] = useState('');
+  const [langTab, setLangTab] = useState<'es' | 'pt'>('es');
+  const [draftEs, setDraftEs] = useState('');
+  const [draftPt, setDraftPt] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   // Sync draft with phase content
   useEffect(() => {
-    setDraft(phase?.content_markdown ?? '');
+    setDraftEs(phase?.content_markdown ?? '');
+    setDraftPt(phase?.content_pt ?? '');
     setSaved(false);
-  }, [phase?.id, phase?.content_markdown]);
+  }, [phase?.id, phase?.content_markdown, phase?.content_pt]);
 
   const handleSave = async () => {
     if (!phase) return;
     setSaving(true);
     try {
-      await updatePhaseContent(phase.id, draft);
+      await updatePhaseContent(phase.id, {
+        content_markdown: draftEs,
+        content_pt: draftPt,
+      });
       setSaved(true);
       onSaved();
       setTimeout(() => setSaved(false), 2000);
@@ -670,23 +711,35 @@ function DocumentationView({ phase, isEditing, onSaved }: {
 
   if (isEditing) {
     return (
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-text-tertiary">Edita en Markdown — soporta headings, code blocks, tablas, listas</p>
+      <div className="space-y-4">
+        {/* Header and Lang Tabs */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2 rounded-lg bg-surface-2 p-1 border border-white/5">
+            <button onClick={() => setLangTab('es')}
+              className={`rounded-md px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all ${langTab === 'es' ? 'bg-white/10 text-white shadow' : 'text-text-tertiary hover:text-text-secondary'}`}>
+              Español
+            </button>
+            <button onClick={() => setLangTab('pt')}
+              className={`rounded-md px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all ${langTab === 'pt' ? 'bg-white/10 text-white shadow' : 'text-text-tertiary hover:text-text-secondary'}`}>
+              Português
+            </button>
+          </div>
+          
           <button onClick={handleSave} disabled={saving}
-            className={`flex cursor-pointer items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold transition-all ${
+            className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold transition-all ${
               saved ? 'bg-emerald-500/10 text-emerald-400' : 'bg-white/5 text-text-primary hover:bg-white/10'
             }`}>
             {saving ? <Loader2 size={12} className="animate-spin" /> : saved ? <Check size={12} /> : <Save size={12} />}
             {saved ? '¡Guardado!' : 'Guardar'}
           </button>
         </div>
+
         <textarea
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
+          value={langTab === 'es' ? draftEs : draftPt}
+          onChange={(e) => langTab === 'es' ? setDraftEs(e.target.value) : setDraftPt(e.target.value)}
           className="glass w-full resize-none rounded-xl px-4 py-3 font-mono text-sm leading-relaxed text-text-primary outline-none placeholder:text-text-tertiary"
           style={{ minHeight: '400px' }}
-          placeholder="## Título de la sección&#10;&#10;Escribe el contenido en Markdown...&#10;&#10;### Paso 1&#10;Descripción del paso...&#10;&#10;```bash&#10;comando de ejemplo&#10;```"
+          placeholder={langTab === 'es' ? '## Título de la sección\n\nEscribe el contenido en Markdown...' : '## Título da seção\n\nEscreva o conteúdo em Markdown...'}
           spellCheck={false}
         />
       </div>
