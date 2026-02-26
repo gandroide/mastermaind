@@ -9,6 +9,7 @@ import { formatCurrency } from '@/lib/utils';
 import type { Contract, ContractStatus, Client } from '@/types/database';
 import ContractModal from '@/components/contracts/ContractModal';
 import ContractSigner from '@/components/contracts/ContractSigner';
+import ContractDetailModal from '@/components/contracts/ContractDetailModal';
 import {
   Plus,
   Search,
@@ -61,6 +62,7 @@ export default function ContractsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
   const [signerContract, setSignerContract] = useState<Contract | null>(null);
+  const [viewingContract, setViewingContract] = useState<Contract | null>(null);
   const [contextMenu, setContextMenu] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
 
@@ -298,7 +300,11 @@ export default function ContractsPage() {
                   variants={rowVariants}
                   exit="exit"
                   layout
-                  className={`glass-card group relative p-5 transition-all hover:border-white/15 ${
+                  onClick={(e) => {
+                    if ((e.target as HTMLElement).closest('[data-context-menu]')) return;
+                    setViewingContract(contract);
+                  }}
+                  className={`cursor-pointer glass-card group relative p-5 transition-all hover:border-white/15 ${
                     contextMenu === contract.id ? 'z-[60] overflow-visible' : 'overflow-hidden'
                   }`}
                 >
@@ -443,6 +449,15 @@ export default function ContractsPage() {
         onSaved={handleSaved}
         contract={editingContract}
       />
+
+      <AnimatePresence>
+        {viewingContract && (
+          <ContractDetailModal
+            contract={viewingContract}
+            onClose={() => setViewingContract(null)}
+          />
+        )}
+      </AnimatePresence>
 
       {signerContract && (
         <ContractSigner

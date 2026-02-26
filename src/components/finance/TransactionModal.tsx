@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { createTransaction } from '@/services/finance';
 import { useAppStore } from '@/lib/store';
-import type { Transaction, TransactionType } from '@/types/database';
-import { X, Loader2, DollarSign, Calendar, Tag, FileText } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import type { Transaction, TransactionType, Contract } from '@/types/database';
+import { X, Loader2, DollarSign, Calendar, Tag, FileText, Link as LinkIcon } from 'lucide-react';
 
 interface Props {
   onClose: () => void;
@@ -23,8 +24,26 @@ export default function TransactionModal({ onClose, onSuccess, activeColor, busi
   const [date, setDate] = useState(initialData?.date || new Date().toISOString().split('T')[0]);
   const [description, setDescription] = useState(initialData?.description || '');
   const [status, setStatus] = useState<Transaction['status']>(initialData?.status || 'paid');
+  const [contractId, setContractId] = useState<string>(initialData?.contract_id || '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Contracts for the current BU
+  const [contracts, setContracts] = useState<Pick<Contract, 'id' | 'title'>[]>([]);
+
+  useEffect(() => {
+    async function loadContracts() {
+      if (!businessUnitId) return;
+      const { data } = await supabase
+        .from('contracts')
+        .select('id, title')
+        .eq('business_unit_id', businessUnitId)
+        .neq('status', 'draft')
+        .order('created_at', { ascending: false });
+      if (data) setContracts(data as Pick<Contract, 'id' | 'title'>[]);
+    }
+    loadContracts();
+  }, [businessUnitId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,6 +68,7 @@ export default function TransactionModal({ onClose, onSuccess, activeColor, busi
         date,
         status, // Allow edit status
         business_unit_id: businessUnitId,
+        contract_id: contractId || null,
       };
 
       let tx;
@@ -185,6 +205,30 @@ export default function TransactionModal({ onClose, onSuccess, activeColor, busi
                     <option value="Otros Gastos" className="bg-zinc-900">Otros Gastos</option>
                   </>
                 )}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-text-tertiary">
+                <svg className="h-4 w-4 fill-current" viewBox="0 0 20 20">
+                  <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          {/* Optional Contract Link */}
+          <div>
+            <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-text-secondary">
+              <LinkIcon size={14} className="text-text-tertiary" /> Vincular a Proyecto (Opcional)
+            </label>
+            <div className="relative">
+              <select
+                value={contractId}
+                onChange={(e) => setContractId(e.target.value)}
+                className="glass w-full cursor-pointer appearance-none rounded-xl px-4 py-3 text-sm text-text-primary outline-none focus:ring-1 focus:ring-white/10"
+              >
+                <option value="" className="bg-zinc-900">Ninguno (Operación General)</option>
+                {contracts.map(c => (
+                  <option key={c.id} value={c.id} className="bg-zinc-900">{c.title}</option>
+                ))}
               </select>
               <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-text-tertiary">
                 <svg className="h-4 w-4 fill-current" viewBox="0 0 20 20">
