@@ -20,7 +20,7 @@ const NAV_ITEMS = [
   { href: '/clients',    label: 'Clients',     icon: Users },
   { href: '/contracts',  label: 'Contracts',   icon: FileSignature },
   { href: '/finances',   label: 'Finances',    icon: DollarSign },
-  { href: '/inventory',  label: 'Inventory',   icon: Package },
+  { href: '/inventory',  label: 'Inventory',   icon: Package, showFor: ['all', 'bio-alert'] as string[] },
   { href: '/tech-hub',   label: 'Tech Hub',    icon: Server },
 ];
 
@@ -42,8 +42,13 @@ const overlayVariants = {
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { sidebarOpen, setSidebarOpen } = useAppStore();
+  const { sidebarOpen, setSidebarOpen, activeUnit } = useAppStore();
   const activeConfig = useAppStore((s) => s.getActiveConfig());
+
+  // Filter nav items based on active BU
+  const visibleItems = NAV_ITEMS.filter((item) =>
+    !item.showFor || item.showFor.includes(activeUnit)
+  );
 
   return (
     <>
@@ -104,7 +109,7 @@ export default function Sidebar() {
 
         {/* Navigation */}
         <nav className="mt-2 flex-1 space-y-1 px-3">
-          {NAV_ITEMS.map((item) => {
+          {visibleItems.map((item) => {
             const isActive = pathname === item.href;
             const Icon = item.icon;
 

@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
-import AppShell from '@/components/layout/AppShell';
+import LayoutSwitcher from '@/components/layout/LayoutSwitcher';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -34,7 +34,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icon-192.png" />
       </head>
       <body className="antialiased">
-        <AppShell>{children}</AppShell>
+        <LayoutSwitcher>{children}</LayoutSwitcher>
       </body>
     </html>
   );

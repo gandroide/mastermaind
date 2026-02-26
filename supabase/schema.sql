@@ -86,18 +86,18 @@ CREATE INDEX idx_finances_bu   ON finances(business_unit_id);
 CREATE INDEX idx_finances_type ON finances(type);
 CREATE INDEX idx_finances_date ON finances(date);
 
--- ── Inventory ──
+-- ── Inventory (Distributed Technical Inventory) ──
 CREATE TABLE IF NOT EXISTS inventory (
   id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   business_unit_id UUID NOT NULL REFERENCES business_units(id) ON DELETE RESTRICT,
-  name             VARCHAR(200) NOT NULL,
+  item_name        VARCHAR(200) NOT NULL,
   sku              VARCHAR(100),
-  category         VARCHAR(100),
-  quantity         NUMERIC(12,2) NOT NULL DEFAULT 0,
-  unit             VARCHAR(50)   DEFAULT 'units', -- supports: units, boxes, pallets, kg, liters, etc.
-  unit_cost        NUMERIC(12,2) DEFAULT 0,
-  currency         VARCHAR(3)    DEFAULT 'USD',
-  min_stock        NUMERIC(12,2) DEFAULT 0,
+  category         VARCHAR(100),        -- e.g. 'Componente Electrónico', 'Producto Ensamblado'
+  quantity         INTEGER NOT NULL DEFAULT 0,
+  location         VARCHAR(100),        -- e.g. 'Dominicana', 'Portugal', 'Argentina'
+  description      TEXT,                -- long technical description
+  image_url        TEXT,                -- reference image (Supabase Storage)
+  schematic_url    TEXT,                -- electrical schematic PDF/image (Supabase Storage)
   notes            TEXT,
   is_active        BOOLEAN     DEFAULT TRUE,
   created_at       TIMESTAMPTZ DEFAULT NOW(),
@@ -107,6 +107,7 @@ CREATE TABLE IF NOT EXISTS inventory (
 CREATE INDEX idx_inventory_bu       ON inventory(business_unit_id);
 CREATE INDEX idx_inventory_category ON inventory(category);
 CREATE INDEX idx_inventory_sku      ON inventory(sku);
+CREATE INDEX idx_inventory_location ON inventory(location);
 
 -- ── Auto-update timestamps trigger ──
 CREATE OR REPLACE FUNCTION update_updated_at()

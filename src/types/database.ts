@@ -73,14 +73,14 @@ export interface Finance {
 export interface InventoryItem {
   id: string;
   business_unit_id: string;
-  name: string;
+  item_name: string;
   sku: string | null;
   category: string | null;
   quantity: number;
-  unit: string;
-  unit_cost: number;
-  currency: string;
-  min_stock: number;
+  location: string | null;
+  description: string | null;
+  image_url: string | null;
+  schematic_url: string | null;
   notes: string | null;
   is_active: boolean;
   created_at: string;
@@ -90,6 +90,24 @@ export interface InventoryItem {
 }
 
 // ── Form types (for create/update) ──
+
+export interface CreateInventoryPayload {
+  business_unit_id: string;
+  item_name: string;
+  sku?: string;
+  category?: string;
+  quantity: number;
+  location?: string;
+  description?: string;
+  image_url?: string;
+  schematic_url?: string;
+  notes?: string;
+}
+
+export interface UpdateInventoryPayload extends Partial<CreateInventoryPayload> {
+  id: string;
+  is_active?: boolean;
+}
 
 export interface CreateClientPayload {
   business_unit_id: string;
