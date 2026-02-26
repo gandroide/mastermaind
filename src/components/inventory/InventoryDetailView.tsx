@@ -147,7 +147,7 @@ export default function InventoryDetailView({ item, onClose }: Props) {
                   style={{ background: 'linear-gradient(135deg, #34d399, #059669)' }}
                 >
                   <FileText size={20} />
-                  Ver Esquema Eléctrico
+                  Ver Esquema
                 </button>
               )}
             </div>

@@ -136,7 +136,7 @@ export default function InventoryDetailModal({ item, onClose, onEdit }: Props) {
                 }}
               >
                 <FileText size={20} />
-                Ver Esquema Eléctrico
+                Ver Esquema
               </button>
             )}
 

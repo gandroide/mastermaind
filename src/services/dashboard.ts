@@ -49,10 +49,10 @@ export async function getDashboardMetrics(buSlug?: string): Promise<DashboardMet
   const { count: inventoryCount } = await invQuery;
 
   // ── Low stock ──
-  let lowStockQuery = supabase.from('inventory').select('id, quantity, min_stock').eq('is_active', true);
+  let lowStockQuery = supabase.from('inventory').select('id, quantity').eq('is_active', true);
   if (buId) lowStockQuery = lowStockQuery.eq('business_unit_id', buId);
   const { data: lowStockData } = await lowStockQuery;
-  const lowStockCount = (lowStockData ?? []).filter((item) => Number(item.quantity) <= Number(item.min_stock)).length;
+  const lowStockCount = (lowStockData ?? []).filter((item) => Number(item.quantity) <= 5).length;
 
   return {
     totalRevenue,
