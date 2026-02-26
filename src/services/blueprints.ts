@@ -202,17 +202,24 @@ export async function getPublicBlueprint(token: string): Promise<BlueprintWithDe
     .eq('blueprint_id', blueprint.id)
     .order('phase_number');
 
-  // BOM: only part_name + quantity_needed — NO inventory join (no stock/price leak)
+  // BOM: include part_name + quantity_needed + inventory (image_url & schematic_url) safely
   const { data: materials } = await supabase
     .from('blueprint_materials')
-    .select('id, blueprint_id, part_name, quantity_needed, notes, created_at')
+    .select('id, blueprint_id, part_name, quantity_needed, notes, created_at, inventory_item:inventory(image_url, schematic_url)')
     .eq('blueprint_id', blueprint.id)
     .order('part_name');
 
   return {
     ...blueprint,
     phases: phases ?? [],
-    materials: (materials ?? []).map((m) => ({ ...m, inventory_item_id: null })),
+    materials: (materials ?? []).map((m: any) => ({
+      ...m,
+      inventory_item_id: null,
+      inventory_item: m.inventory_item ? { 
+        image_url: m.inventory_item.image_url,
+        schematic_url: m.inventory_item.schematic_url 
+      } : null,
+    })),
   };
 }
 

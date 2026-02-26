@@ -19,6 +19,7 @@ import {
   Package,
   FileText,
   AlertCircle,
+  ExternalLink,
 } from 'lucide-react';
 
 // ── Phase definitions ──
@@ -225,19 +226,38 @@ export default function ShareBlueprintPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-6">
       {/* Header */}
-      <motion.div className="mb-6" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="flex items-center gap-3 mb-2">
-          <BookOpen size={20} className="text-accent-bioalert" />
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">Documentación Técnica</span>
+      <motion.div className="mb-6 flex gap-4 items-start" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+        {(() => {
+          let glyphUrl = '/glyphs/base_node_glyph_1772133744314.png';
+          const nm = (lang === 'pt' && blueprint.name_pt ? blueprint.name_pt : blueprint.name).toLowerCase();
+          if (nm.includes('bread')) glyphUrl = '/glyphs/edge_processing_glyph_1772133756791.png';
+          else if (nm.includes('health') || nm === 'bio-alert') glyphUrl = '/glyphs/base_node_glyph_1772133744314.png';
+          else if (nm.includes('net') || nm.includes('red') || nm.includes('mesh')) glyphUrl = '/glyphs/mesh_network_glyph_1772133768410.png';
+          else if (nm.includes('power') || nm.includes('potencia')) glyphUrl = '/glyphs/power_node_glyph_1772133780491.png';
+
+          return (
+            <div className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl bg-white/[0.02] border border-white/10 overflow-hidden mt-1">
+              <img src={glyphUrl} alt="Glyph" className="h-[120%] w-[120%] object-cover opacity-90 mix-blend-screen" />
+            </div>
+          );
+        })()}
+
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <BookOpen size={16} className="text-accent-bioalert" />
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
+              Documentación Técnica — {lang === 'pt' && blueprint.name_pt ? blueprint.name_pt : blueprint.name}
+            </span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-text-primary">
+            {lang === 'pt' && blueprint.name_pt ? blueprint.name_pt : blueprint.name}
+          </h1>
+          {((lang === 'pt' && blueprint.description_pt) || blueprint.description) && (
+            <p className="mt-1 text-xs sm:text-sm text-text-secondary">
+              {lang === 'pt' && blueprint.description_pt ? blueprint.description_pt : blueprint.description}
+            </p>
+          )}
         </div>
-        <h1 className="text-2xl font-bold tracking-tight text-text-primary">
-          {lang === 'pt' && blueprint.name_pt ? blueprint.name_pt : blueprint.name}
-        </h1>
-        {((lang === 'pt' && blueprint.description_pt) || blueprint.description) && (
-          <p className="mt-1 text-sm text-text-secondary">
-            {lang === 'pt' && blueprint.description_pt ? blueprint.description_pt : blueprint.description}
-          </p>
-        )}
       </motion.div>
 
       {/* Mobile phase selector (horizontal scroll) */}
@@ -316,7 +336,7 @@ export default function ShareBlueprintPage() {
               {/* Phase content */}
               <div className="p-5">
                 {activePhase === 1 ? (
-                  <PublicBOMView materials={blueprint.materials} dict={dict} />
+                  <PublicBOMView materials={blueprint.materials} dict={dict} onOpenSchematic={(url, title) => setSchematicViewer({ url, title })} />
                 ) : (
                   <PublicDocView phase={currentPhase ?? null} dict={dict} lang={lang} />
                 )}
@@ -347,7 +367,7 @@ export default function ShareBlueprintPage() {
 // Public BOM View — RESTRICTED: no stock, no prices, no inventory links
 // ══════════════════════════════════════
 
-function PublicBOMView({ materials, dict }: { materials: BlueprintMaterial[], dict: any }) {
+function PublicBOMView({ materials, dict, onOpenSchematic }: { materials: BlueprintMaterial[], dict: any, onOpenSchematic: (u: string, t: string) => void }) {
   if (materials.length === 0) {
     return (
       <div className="flex flex-col items-center py-10 text-center">
@@ -376,10 +396,25 @@ function PublicBOMView({ materials, dict }: { materials: BlueprintMaterial[], di
               <tr key={mat.id} className="border-b border-white/[0.04] last:border-b-0">
                 <td className="py-3 pr-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-3">
-                      <Package size={12} className="text-text-tertiary" />
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-surface-3">
+                      {mat.inventory_item?.image_url ? (
+                        <img src={mat.inventory_item.image_url} alt={mat.part_name} className="h-full w-full object-cover" />
+                      ) : (
+                        <Package size={14} className="text-text-tertiary" />
+                      )}
                     </div>
-                    <p className="font-medium text-text-primary">{mat.part_name}</p>
+                    <div className="flex flex-col gap-1 items-start">
+                      <p className="font-medium text-text-primary">{mat.part_name}</p>
+                      {mat.inventory_item?.schematic_url && (
+                        <button
+                          onClick={() => onOpenSchematic(mat.inventory_item!.schematic_url!, mat.part_name)}
+                          className="group flex cursor-pointer items-center gap-1.5 rounded-lg bg-emerald-500/10 px-2 py-1 text-[10px] font-semibold text-emerald-400 transition-colors hover:bg-emerald-500/20 hover:text-emerald-300"
+                        >
+                          <ExternalLink size={12} />
+                          {dict.viewSchematic || 'Ver esquema'}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </td>
                 <td className="py-3 pr-4 text-center">
