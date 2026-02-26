@@ -18,8 +18,6 @@ import SchematicViewerModal from '@/components/inventory/SchematicViewerModal';
 import ShareModal from '@/components/blueprints/ShareModal';
 import {
   BookOpen,
-  ChevronRight,
-  ChevronDown,
   Package,
   Cpu,
   Wrench,
