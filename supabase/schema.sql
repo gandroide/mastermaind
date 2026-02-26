@@ -82,6 +82,28 @@ CREATE TABLE IF NOT EXISTS finances (
   updated_at       TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TYPE transaction_status AS ENUM ('pending', 'paid', 'overdue');
+
+CREATE TABLE IF NOT EXISTS transactions (
+  id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  type               VARCHAR(20) NOT NULL CHECK (type IN ('income', 'expense')),
+  amount             NUMERIC(14,2) NOT NULL DEFAULT 0,
+  currency           VARCHAR(3) DEFAULT 'USD',
+  category           VARCHAR(100),
+  description        TEXT,
+  status             transaction_status DEFAULT 'pending',
+  business_unit_id   UUID NOT NULL REFERENCES business_units(id) ON DELETE RESTRICT,
+  date               DATE NOT NULL DEFAULT CURRENT_DATE,
+  contract_id        UUID REFERENCES contracts(id) ON DELETE SET NULL,
+  inventory_item_id  UUID REFERENCES inventory(id) ON DELETE SET NULL,
+  created_at         TIMESTAMPTZ DEFAULT NOW(),
+  updated_at         TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow full access to transactions" ON transactions FOR ALL USING (true) WITH CHECK (true);
+
+
 CREATE INDEX idx_finances_bu   ON finances(business_unit_id);
 CREATE INDEX idx_finances_type ON finances(type);
 CREATE INDEX idx_finances_date ON finances(date);

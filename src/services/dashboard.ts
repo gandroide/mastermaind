@@ -17,13 +17,15 @@ export async function getDashboardMetrics(buSlug?: string): Promise<DashboardMet
   const buId = await getBuId(buSlug);
 
   // ── Revenue (income) ──
-  let incomeQuery = supabase.from('finances').select('amount').eq('type', 'income');
+  let incomeQuery = supabase.from('transactions').select('amount').eq('type', 'income');
   if (buId) incomeQuery = incomeQuery.eq('business_unit_id', buId);
   const { data: incomeData } = await incomeQuery;
   const totalRevenue = (incomeData ?? []).reduce((sum, r) => sum + Number(r.amount), 0);
 
-  // ── Expenses ──
-  let expenseQuery = supabase.from('finances').select('amount').eq('type', 'expense');
+  // ── Expenses (Operating Expenses mainly for dashboard) ──
+  // Per user request, totalExpenses on the generic dashboard might want to reflect all expenses, 
+  // but if we need to split it, we do it here. For the root dashboard, we just sum up everything, or we can mirror the logic.
+  let expenseQuery = supabase.from('transactions').select('amount').eq('type', 'expense');
   if (buId) expenseQuery = expenseQuery.eq('business_unit_id', buId);
   const { data: expenseData } = await expenseQuery;
   const totalExpenses = (expenseData ?? []).reduce((sum, r) => sum + Number(r.amount), 0);

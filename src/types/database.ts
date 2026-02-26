@@ -188,3 +188,24 @@ export interface BlueprintWithDetails extends Blueprint {
   phases: BlueprintPhase[];
   materials: BlueprintMaterial[];
 }
+
+// ── Finance (Transactions) ──
+
+export type TransactionType = 'income' | 'expense';
+export type TransactionStatus = 'pending' | 'paid' | 'overdue';
+
+export interface Transaction {
+  id: string;
+  type: TransactionType;
+  amount: number;
+  currency: string;
+  category: string | null;
+  description: string | null;
+  status: TransactionStatus;
+  business_unit_id: string;
+  date: string;
+  contract_id: string | null;
+  inventory_item_id: string | null;
+  created_at: string;
+  updated_at: string;
+}

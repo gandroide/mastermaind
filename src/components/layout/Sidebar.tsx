@@ -14,13 +14,14 @@ import {
   BookOpen,
   Server,
   X,
+  WalletCards,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
   { href: '/',           label: 'Dashboard',   icon: LayoutDashboard },
   { href: '/clients',    label: 'Clients',     icon: Users },
   { href: '/contracts',  label: 'Contracts',   icon: FileSignature },
-  { href: '/finances',   label: 'Finances',    icon: DollarSign },
+  { href: '/finance',    label: 'Finance',     icon: WalletCards },
   { href: '/inventory',  label: 'Inventory',   icon: Package, showFor: ['all', 'bio-alert'] as string[] },
   { href: '/blueprints', label: 'Blueprints',  icon: BookOpen, showFor: ['all', 'bio-alert'] as string[] },
   { href: '/tech-hub',   label: 'Tech Hub',    icon: Server },
