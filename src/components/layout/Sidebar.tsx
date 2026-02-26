@@ -11,6 +11,7 @@ import {
   FileSignature,
   DollarSign,
   Package,
+  BookOpen,
   Server,
   X,
 } from 'lucide-react';
@@ -21,6 +22,7 @@ const NAV_ITEMS = [
   { href: '/contracts',  label: 'Contracts',   icon: FileSignature },
   { href: '/finances',   label: 'Finances',    icon: DollarSign },
   { href: '/inventory',  label: 'Inventory',   icon: Package, showFor: ['all', 'bio-alert'] as string[] },
+  { href: '/blueprints', label: 'Blueprints',  icon: BookOpen, showFor: ['all', 'bio-alert'] as string[] },
   { href: '/tech-hub',   label: 'Tech Hub',    icon: Server },
 ];
 

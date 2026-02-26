@@ -7,6 +7,7 @@ import { getInventory, deleteInventoryItem, getInventoryCategories, getInventory
 import type { InventoryItem } from '@/types/database';
 import InventoryModal from '@/components/inventory/InventoryModal';
 import SchematicViewerModal from '@/components/inventory/SchematicViewerModal';
+import InventoryDetailView from '@/components/inventory/InventoryDetailView';
 import {
   Plus,
   Search,
@@ -63,6 +64,7 @@ export default function InventoryPage() {
   const [partnerLinksOpen, setPartnerLinksOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const [schematicViewer, setSchematicViewer] = useState<{ url: string; title: string } | null>(null);
+  const [viewingItem, setViewingItem] = useState<InventoryItem | null>(null);
 
   // Route guard flag (early return AFTER all hooks)
   const inventoryAllowed = activeUnit === 'all' || activeUnit === 'bio-alert';
@@ -313,7 +315,8 @@ export default function InventoryPage() {
                 <motion.div
                   key={item.id}
                   variants={rowVariants}
-                  className={`group flex items-center gap-4 border-b border-white/[0.04] px-5 py-3 transition-colors last:border-b-0 hover:bg-white/[0.02] md:grid md:grid-cols-[60px_1fr_1fr_100px_120px_50px] ${
+                  onClick={() => setViewingItem(item)}
+                  className={`group flex cursor-pointer items-center gap-4 border-b border-white/[0.04] px-5 py-3 transition-colors last:border-b-0 hover:bg-white/[0.03] md:grid md:grid-cols-[60px_1fr_1fr_100px_120px_50px] ${
                     contextMenu === item.id ? 'relative z-[60] overflow-visible' : ''
                   }`}
                 >
@@ -360,9 +363,15 @@ export default function InventoryPage() {
                   </div>
 
                   {/* Context menu */}
-                  <div className="relative" data-context-menu>
+                  <div className="relative" data-context-menu
+                    onClick={(e) => e.stopPropagation()}
+                    onTouchEnd={(e) => e.stopPropagation()}
+                  >
                     <button
-                      onClick={() => setContextMenu(contextMenu === item.id ? null : item.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setContextMenu(contextMenu === item.id ? null : item.id);
+                      }}
                       className="flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center rounded-lg p-3 text-text-tertiary transition-all hover:bg-white/5 hover:text-text-primary"
                     >
                       <MoreVertical size={18} />
@@ -428,6 +437,16 @@ export default function InventoryPage() {
         onSaved={handleSaved}
         item={editingItem}
       />
+
+      {/* Detail view (read-only) */}
+      <AnimatePresence>
+        {viewingItem && (
+          <InventoryDetailView
+            item={viewingItem}
+            onClose={() => setViewingItem(null)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Partner Links Modal */}
       <AnimatePresence>

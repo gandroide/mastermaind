@@ -123,3 +123,45 @@ CREATE TRIGGER trg_contracts_updated   BEFORE UPDATE ON contracts  FOR EACH ROW 
 CREATE TRIGGER trg_finances_updated    BEFORE UPDATE ON finances   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER trg_inventory_updated   BEFORE UPDATE ON inventory  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER trg_business_units_upd  BEFORE UPDATE ON business_units FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- ── Blueprints (Hardware Assembly Documentation) ──
+CREATE TABLE IF NOT EXISTS blueprints (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name          VARCHAR(200) NOT NULL,
+  description   TEXT,
+  cover_image   TEXT,
+  share_token   VARCHAR(64)  UNIQUE,
+  share_pin     VARCHAR(6),
+  is_active     BOOLEAN      DEFAULT TRUE,
+  created_at    TIMESTAMPTZ  DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ  DEFAULT NOW()
+);
+
+CREATE INDEX idx_blueprints_share_token ON blueprints(share_token) WHERE share_token IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS blueprint_phases (
+  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  blueprint_id     UUID NOT NULL REFERENCES blueprints(id) ON DELETE CASCADE,
+  phase_number     INTEGER NOT NULL,
+  title            VARCHAR(200) NOT NULL,
+  content_markdown TEXT,
+  created_at       TIMESTAMPTZ DEFAULT NOW(),
+  updated_at       TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(blueprint_id, phase_number)
+);
+
+CREATE TABLE IF NOT EXISTS blueprint_materials (
+  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  blueprint_id      UUID NOT NULL REFERENCES blueprints(id) ON DELETE CASCADE,
+  inventory_item_id UUID REFERENCES inventory(id) ON DELETE SET NULL,
+  part_name         VARCHAR(200) NOT NULL,
+  quantity_needed   INTEGER NOT NULL DEFAULT 1,
+  notes             TEXT,
+  created_at        TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_blueprint_phases_blueprint ON blueprint_phases(blueprint_id);
+CREATE INDEX idx_blueprint_materials_blueprint ON blueprint_materials(blueprint_id);
+
+CREATE TRIGGER trg_blueprints_updated       BEFORE UPDATE ON blueprints       FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER trg_blueprint_phases_updated  BEFORE UPDATE ON blueprint_phases FOR EACH ROW EXECUTE FUNCTION update_updated_at();

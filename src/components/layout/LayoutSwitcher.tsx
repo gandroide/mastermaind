@@ -11,8 +11,8 @@ import AppShell from './AppShell';
 export default function LayoutSwitcher({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
-  // Portal routes are fully isolated — no AppShell
-  if (pathname.startsWith('/portal')) {
+  // Portal and share routes are fully isolated — no AppShell
+  if (pathname.startsWith('/portal') || pathname.startsWith('/share')) {
     return <>{children}</>;
   }
 

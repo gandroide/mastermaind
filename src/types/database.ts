@@ -147,3 +147,44 @@ export interface ClientCardData {
   activeContracts: number;
   inventoryItems: number;
 }
+
+// ── Blueprints ──
+
+export interface Blueprint {
+  id: string;
+  name: string;
+  description: string | null;
+  cover_image: string | null;
+  share_token: string | null;
+  share_pin: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BlueprintPhase {
+  id: string;
+  blueprint_id: string;
+  phase_number: number;
+  title: string;
+  content_markdown: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BlueprintMaterial {
+  id: string;
+  blueprint_id: string;
+  inventory_item_id: string | null;
+  part_name: string;
+  quantity_needed: number;
+  notes: string | null;
+  created_at: string;
+  // Joined inventory item (optional)
+  inventory_item?: InventoryItem | null;
+}
+
+export interface BlueprintWithDetails extends Blueprint {
+  phases: BlueprintPhase[];
+  materials: BlueprintMaterial[];
+}
