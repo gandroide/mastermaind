@@ -7,6 +7,7 @@ import {
   getBlueprints,
   getBlueprintWithDetails,
   createBlueprint,
+  updateBlueprint,
   updatePhaseContent,
   addBlueprintMaterial,
   deleteBlueprintMaterial,
@@ -59,6 +60,7 @@ export default function BlueprintsPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [schematicViewer, setSchematicViewer] = useState<{ url: string; title: string } | null>(null);
   const [showNewModal, setShowNewModal] = useState(false);
+  const [editingBlueprint, setEditingBlueprint] = useState<Blueprint | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
 
   const allowed = activeUnit === 'all' || activeUnit === 'bio-alert';
@@ -161,20 +163,25 @@ export default function BlueprintsPage() {
             }
 
             return (
-              <motion.button key={bp.id} onClick={() => setSelectedId(bp.id)}
-                className="glass-card group flex cursor-pointer flex-col items-start p-6 text-left transition-all active:scale-[0.98] hover:border-white/15"
-                whileTap={{ scale: 0.98 }} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+              <motion.div key={bp.id}
+                className="glass-card group flex flex-col items-start p-6 text-left transition-all hover:border-white/15"
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
                 <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl overflow-hidden"
                   style={{ background: `linear-gradient(135deg, ${activeConfig.color}20, ${activeConfig.color}08)`, border: `1px solid ${activeConfig.color}30` }}>
                   <img src={glyphUrl} alt={`${bp.name} Glyph`} className="h-full w-full object-cover scale-[1.2] opacity-90 group-hover:opacity-100 transition-opacity mix-blend-screen" />
                 </div>
                 <h3 className="text-base font-bold text-text-primary">{bp.name}</h3>
                 {bp.description && <p className="mt-1.5 text-xs leading-relaxed text-text-tertiary line-clamp-2">{bp.description}</p>}
-                <div className="mt-4 flex items-center gap-1 text-xs font-medium text-text-tertiary group-hover:text-text-secondary">
-                  <span>5 fases</span>
-                  <ChevronRight size={14} className="transition-transform group-hover:translate-x-0.5" />
+                
+                <div className="mt-6 flex w-full items-center justify-between border-t border-white/[0.04] pt-4">
+                  <button onClick={() => setSelectedId(bp.id)} className="flex items-center gap-1.5 rounded-lg py-1.5 text-xs font-semibold text-text-tertiary transition-all active:scale-95 group-hover:text-text-primary">
+                    <Eye size={14} /> Ver Fases
+                  </button>
+                  <button onClick={(e) => { e.stopPropagation(); setEditingBlueprint(bp); setShowNewModal(true); }} className="flex cursor-pointer rounded-lg p-2 text-text-tertiary transition-colors hover:bg-white/10 hover:text-text-primary active:scale-95">
+                    <Pencil size={14} />
+                  </button>
                 </div>
-              </motion.button>
+              </motion.div>
             );
           })}
         </motion.div>
@@ -190,18 +197,24 @@ export default function BlueprintsPage() {
               ← Dispositivos
             </button>
             <span className="flex-1 text-sm font-bold text-text-primary">{detail.name}</span>
-            <button onClick={() => setShowShareModal(true)}
-              className="glass flex cursor-pointer items-center gap-2 rounded-xl px-4 py-2 text-xs font-medium text-text-secondary transition-all hover:bg-white/5 hover:text-text-primary">
-              <Share2 size={14} /> Compartir
-            </button>
-            <button onClick={() => setIsEditing(!isEditing)}
-              className={`flex cursor-pointer items-center gap-2 rounded-xl px-4 py-2 text-xs font-medium transition-all ${
-                isEditing
-                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                  : 'glass text-text-secondary hover:bg-white/5 hover:text-text-primary'
-              }`}>
-              {isEditing ? <><Eye size={14} /> Vista previa</> : <><Pencil size={14} /> Editar</>}
-            </button>
+            <div className="flex shrink-0 items-center justify-end gap-2 p-1.5">
+              <button onClick={() => { setEditingBlueprint(detail); setShowNewModal(true); }}
+                className="glass flex cursor-pointer items-center justify-center rounded-xl p-2.5 text-text-secondary transition-all hover:bg-white/5 hover:text-text-primary active:scale-95">
+                <Pencil size={14} />
+              </button>
+              <button onClick={() => setShowShareModal(true)}
+                className="glass flex cursor-pointer items-center gap-2 rounded-xl px-4 py-2 text-xs font-medium text-text-secondary transition-all hover:bg-white/5 hover:text-text-primary active:scale-95">
+                <Share2 size={14} /> Compartir
+              </button>
+              <button onClick={() => setIsEditing(!isEditing)}
+                className={`flex cursor-pointer items-center gap-2 rounded-xl px-4 py-2 text-xs font-medium transition-all active:scale-[0.98] ${
+                  isEditing
+                    ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                    : 'bg-white/10 text-text-primary hover:bg-white/[0.15]'
+                }`}>
+                {isEditing ? <><Eye size={14} /> Vista previa</> : <><Pencil size={14} /> Editar Contenido</>}
+              </button>
+            </div>
           </div>
 
           <div className="flex flex-col gap-6 lg:flex-row">
@@ -282,15 +295,23 @@ export default function BlueprintsPage() {
         </motion.div>
       )}
 
-      {/* New Device Modal */}
+      {/* New / Edit Device Modal */}
       <AnimatePresence>
         {showNewModal && (
           <NewBlueprintModal
-            onClose={() => setShowNewModal(false)}
+            blueprint={editingBlueprint}
+            onClose={() => { setShowNewModal(false); setEditingBlueprint(null); }}
             onCreated={(bp) => {
               setShowNewModal(false);
+              setEditingBlueprint(null);
               fetchBlueprints();
               setSelectedId(bp.id);
+            }}
+            onUpdated={(bp) => {
+              setShowNewModal(false);
+              setEditingBlueprint(null);
+              fetchBlueprints();
+              if (selectedId === bp.id) loadDetails(bp.id);
             }}
             activeColor={activeConfig.color}
           />
@@ -319,19 +340,21 @@ export default function BlueprintsPage() {
 }
 
 // ══════════════════════════════════════════════════
-// New Blueprint Modal
+// New / Edit Blueprint Modal
 // ══════════════════════════════════════════════════
 
-function NewBlueprintModal({ onClose, onCreated, activeColor }: {
+function NewBlueprintModal({ blueprint, onClose, onCreated, onUpdated, activeColor }: {
+  blueprint?: Blueprint | null;
   onClose: () => void;
-  onCreated: (bp: Blueprint) => void;
+  onCreated?: (bp: Blueprint) => void;
+  onUpdated?: (bp: Blueprint) => void;
   activeColor: string;
 }) {
-  const [name, setName] = useState('');
-  const [namePt, setNamePt] = useState('');
-  const [description, setDescription] = useState('');
-  const [descriptionPt, setDescriptionPt] = useState('');
-  const [coverImage, setCoverImage] = useState('');
+  const [name, setName] = useState(blueprint?.name || '');
+  const [namePt, setNamePt] = useState(blueprint?.name_pt || '');
+  const [description, setDescription] = useState(blueprint?.description || '');
+  const [descriptionPt, setDescriptionPt] = useState(blueprint?.description_pt || '');
+  const [coverImage, setCoverImage] = useState(blueprint?.cover_image || '');
   const [langTab, setLangTab] = useState<'es' | 'pt'>('es');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -341,15 +364,33 @@ function NewBlueprintModal({ onClose, onCreated, activeColor }: {
     if (!name.trim()) { setError('El nombre es obligatorio'); return; }
     setSaving(true); setError(null);
     try {
-      const bp = await createBlueprint({
-        name: name.trim(),
-        name_pt: namePt.trim() || undefined,
-        description: description.trim() || undefined,
-        description_pt: descriptionPt.trim() || undefined,
-        cover_image: coverImage.trim() || undefined,
-      });
-      onCreated(bp);
-    } catch { setError('Error al crear el dispositivo'); }
+      if (blueprint) {
+        await updateBlueprint(blueprint.id, {
+          name: name.trim(),
+          name_pt: namePt.trim() || null,
+          description: description.trim() || null,
+          description_pt: descriptionPt.trim() || null,
+          cover_image: coverImage.trim() || null,
+        });
+        if (onUpdated) onUpdated({
+          ...blueprint,
+          name: name.trim(),
+          name_pt: namePt.trim() || null,
+          description: description.trim() || null,
+          description_pt: descriptionPt.trim() || null,
+          cover_image: coverImage.trim() || null,
+        });
+      } else {
+        const bp = await createBlueprint({
+          name: name.trim(),
+          name_pt: namePt.trim() || undefined,
+          description: description.trim() || undefined,
+          description_pt: descriptionPt.trim() || undefined,
+          cover_image: coverImage.trim() || undefined,
+        });
+        if (onCreated) onCreated(bp);
+      }
+    } catch { setError(`Error al ${blueprint ? 'actualizar' : 'crear'} el dispositivo`); }
     finally { setSaving(false); }
   };
 
@@ -365,7 +406,9 @@ function NewBlueprintModal({ onClose, onCreated, activeColor }: {
         exit={{ opacity: 0, scale: 0.95, y: 20, transition: { duration: 0.15 } }}>
 
         <div className="flex items-center justify-between border-b border-white/[0.06] px-6 py-4">
-          <h3 className="text-base font-bold text-text-primary">Nuevo Dispositivo</h3>
+          <h3 className="text-base font-bold text-text-primary">
+            {blueprint ? 'Editar Dispositivo' : 'Nuevo Dispositivo'}
+          </h3>
           <button type="button" onClick={onClose}
             className="flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center rounded-xl text-text-tertiary hover:bg-white/5">
             <X size={18} />
@@ -434,7 +477,7 @@ function NewBlueprintModal({ onClose, onCreated, activeColor }: {
             className="flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-text-inverse transition-all active:scale-[0.98] disabled:opacity-60"
             style={{ background: `linear-gradient(135deg, ${activeColor}, ${activeColor}cc)` }}>
             {saving && <Loader2 size={16} className="animate-spin" />}
-            Crear Dispositivo
+            {blueprint ? 'Guardar Cambios' : 'Crear Dispositivo'}
           </button>
         </div>
       </motion.form>

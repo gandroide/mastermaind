@@ -80,6 +80,21 @@ export async function createBlueprint(payload: {
   return data;
 }
 
+export async function updateBlueprint(id: string, payload: {
+  name?: string;
+  name_pt?: string | null;
+  description?: string | null;
+  description_pt?: string | null;
+  cover_image?: string | null;
+}): Promise<void> {
+  const { error } = await supabase
+    .from('blueprints')
+    .update(payload)
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
 // ── Phases — Read ──
 
 export async function getBlueprintPhases(blueprintId: string): Promise<BlueprintPhase[]> {
