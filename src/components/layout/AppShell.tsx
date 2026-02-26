@@ -16,7 +16,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {/* Main area */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Header */}
-        <header className="glass z-30 flex items-center justify-between border-b border-white/[0.06] px-4 py-3 lg:px-6">
+        <header className="glass z-30 flex items-center justify-between border-b border-white/[0.06] px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] lg:px-6">
           <div className="flex items-center gap-3">
             {/* Hamburger for mobile / when sidebar closed */}
             {!sidebarOpen && (
@@ -39,7 +39,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-6">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] lg:px-6 lg:pt-6 lg:pb-[calc(env(safe-area-inset-bottom)+1.5rem)]">
           {children}
         </main>
       </div>

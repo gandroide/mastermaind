@@ -81,7 +81,7 @@ export default function Sidebar() {
         animate={sidebarOpen ? 'open' : 'closed'}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5">
+        <div className="flex items-center justify-between px-6 pb-5 pt-[calc(env(safe-area-inset-top)+1.25rem)]">
           <div className="flex items-center gap-3">
             <div
               className="flex h-9 w-9 items-center justify-center rounded-xl text-sm font-black"
@@ -166,7 +166,7 @@ export default function Sidebar() {
         </nav>
 
         {/* Footer */}
-        <div className="border-t border-white/[0.06] p-4">
+        <div className="border-t border-white/[0.06] p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
           <div className="flex items-center gap-3 rounded-xl px-3 py-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs font-bold text-text-primary">
               AP
