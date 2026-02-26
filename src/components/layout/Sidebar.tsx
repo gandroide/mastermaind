@@ -81,7 +81,7 @@ export default function Sidebar() {
         animate={sidebarOpen ? 'open' : 'closed'}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 pb-5 pt-[calc(env(safe-area-inset-top)+1.25rem)]">
+        <div className="flex items-center justify-between px-6 pb-5 pt-[calc(env(safe-area-inset-top)+2rem)]">
           <div className="flex items-center gap-3">
             <div
               className="flex h-9 w-9 items-center justify-center rounded-xl text-sm font-black"
