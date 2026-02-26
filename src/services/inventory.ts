@@ -147,20 +147,16 @@ export async function getInventoryLocations(): Promise<string[]> {
 
 // ── Share (Partner Portal) ──
 
-function generateToken(): string {
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-  return Array.from({ length: 16 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-}
-
 function generatePin(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
 }
 
 export async function enableInventoryShare(buSlug: string, customPin?: string) {
   const buId = await getBuId(buSlug);
   if (!buId) throw new Error('BU not found');
 
-  const token = generateToken();
+  const token = crypto.randomUUID();
   const pin = customPin || generatePin();
 
   const { data, error } = await supabase
@@ -230,7 +226,7 @@ export async function getInventoryShareDetails(buSlug: string): Promise<{ token:
   return { token: data.inventory_share_token, pin: data.inventory_share_pin };
 }
 
-export async function getPublicInventory(): Promise<InventoryItem[] | null> {
+export async function getPublicInventory(location?: string): Promise<InventoryItem[] | null> {
   // We only share Bio-Alert inventory by default
   const { data: bu, error: buError } = await supabase
     .from('business_units')
@@ -241,12 +237,17 @@ export async function getPublicInventory(): Promise<InventoryItem[] | null> {
   if (buError || !bu) return null;
 
   // 2. Fetch active inventory for that BU
-  const { data: items, error: itemsError } = await supabase
+  let query = supabase
     .from('inventory')
     .select('*')
     .eq('business_unit_id', bu.id)
-    .eq('is_active', true)
-    .order('item_name');
+    .eq('is_active', true);
+
+  if (location) {
+    query = query.eq('location', location);
+  }
+
+  const { data: items, error: itemsError } = await query.order('item_name');
 
   if (itemsError) return null;
   return items as InventoryItem[];

@@ -18,6 +18,7 @@ interface Props {
   item?: InventoryItem | null;
   isPartnerMode?: boolean;
   lang?: AppLanguage | null;
+  lockedLocation?: string;
 }
 
 const overlayVariants = { hidden: { opacity: 0 }, visible: { opacity: 1 } };
@@ -29,7 +30,7 @@ const modalVariants = {
 
 const LOCATION_OPTIONS = ['Dominicana', 'Portugal', 'Argentina'];
 
-export default function InventoryModal({ open, onClose, onSaved, item, isPartnerMode = false, lang = 'es' }: Props) {
+export default function InventoryModal({ open, onClose, onSaved, item, isPartnerMode = false, lang = 'es', lockedLocation }: Props) {
   const activeConfig = useAppStore((s) => s.getActiveConfig());
   const activeUnit = useAppStore((s) => s.activeUnit);
   const isEditing = !!item;
@@ -136,7 +137,7 @@ export default function InventoryModal({ open, onClose, onSaved, item, isPartner
           sku: sku.trim() || undefined,
           category: category.trim() || undefined,
           quantity: parseInt(quantity),
-          location: location || undefined,
+          location: lockedLocation || location || undefined,
           description: description.trim() || undefined,
           image_url: imageUrl || undefined,
           schematic_url: schematicUrl || undefined,
@@ -313,17 +314,19 @@ export default function InventoryModal({ open, onClose, onSaved, item, isPartner
                   <input type="number" min="0" step="1" value={quantity} onChange={(e) => setQuantity(e.target.value)}
                     placeholder="0" className="glass w-full rounded-xl px-4 py-3 text-sm text-text-primary outline-none placeholder:text-text-tertiary" />
                 </div>
-                <div>
-                  <label className="mb-1.5 flex items-center gap-2 text-xs font-medium text-text-secondary"><MapPin size={12} />{dict.location}</label>
-                  <div className="relative">
-                    <select value={location} onChange={(e) => setLocation(e.target.value)}
-                      className="glass w-full appearance-none rounded-xl px-4 py-3 pr-10 text-sm text-text-primary outline-none">
-                      <option value="" className="bg-surface-2">{dict.select}</option>
-                      {LOCATION_OPTIONS.map((l) => <option key={l} value={l} className="bg-surface-2">{l}</option>)}
-                    </select>
-                    <ChevronDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary" />
+                {(!isPartnerMode || !lockedLocation) && (
+                  <div>
+                    <label className="mb-1.5 flex items-center gap-2 text-xs font-medium text-text-secondary"><MapPin size={12} />{dict.location}</label>
+                    <div className="relative">
+                      <select value={location} onChange={(e) => setLocation(e.target.value)}
+                        className="glass w-full appearance-none rounded-xl px-4 py-3 pr-10 text-sm text-text-primary outline-none">
+                        <option value="" className="bg-surface-2">{dict.select}</option>
+                        {LOCATION_OPTIONS.map((l) => <option key={l} value={l} className="bg-surface-2">{l}</option>)}
+                      </select>
+                      <ChevronDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary" />
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Description */}

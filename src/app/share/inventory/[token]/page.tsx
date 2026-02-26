@@ -36,6 +36,7 @@ export default function SharedInventoryPortal() {
   const searchParams = useSearchParams();
   const token = params.token as string;
   const lang = searchParams.get('lang') as AppLanguage | null;
+  const loc = searchParams.get('loc'); // partner locked region
   const dict = getDictionary(lang);
 
   // Auth State
@@ -56,7 +57,7 @@ export default function SharedInventoryPortal() {
 
   const handleFetchInventory = useCallback(async () => {
     setLoading(true);
-    const data = await getPublicInventory(); // ignores token dynamically, checks bio-alert BU
+    const data = await getPublicInventory(loc || undefined); // ignores token dynamically, checks bio-alert BU
     if (data) {
       setItems(data);
       setFilteredItems(data);
@@ -68,7 +69,7 @@ export default function SharedInventoryPortal() {
   }, []);
 
   const handlePinChange = (index: number, value: string) => {
-    if (!/^[0-9]*$/.test(value)) return;
+    if (!/^[a-zA-Z0-9]*$/.test(value)) return;
     const newPin = [...pin];
     newPin[index] = value;
     setPin(newPin);
@@ -85,6 +86,24 @@ export default function SharedInventoryPortal() {
       const prevInput = document.getElementById(`pin-${index - 1}`);
       prevInput?.focus();
     }
+  };
+
+  const handlePinPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text').replace(/\s/g, '').slice(0, 6);
+    if (!/^[a-zA-Z0-9]+$/.test(pastedData)) return;
+
+    const newPin = [...pin];
+    for (let i = 0; i < pastedData.length; i++) {
+      if (i < 6) newPin[i] = pastedData[i].toUpperCase();
+    }
+    setPin(newPin);
+    setErrorVisible(false);
+
+    // Focus the next empty input, or the last one if full
+    const nextEmptyIndex = newPin.findIndex((val) => val === '');
+    const focusIndex = nextEmptyIndex === -1 ? 5 : nextEmptyIndex;
+    document.getElementById(`pin-${focusIndex}`)?.focus();
   };
 
   const verifyPin = async () => {
@@ -170,12 +189,13 @@ export default function SharedInventoryPortal() {
                 key={i}
                 id={`pin-${i}`}
                 type="text"
-                inputMode="numeric"
+                inputMode="text"
                 maxLength={1}
                 value={digit}
-                onChange={(e) => handlePinChange(i, e.target.value)}
+                onChange={(e) => handlePinChange(i, e.target.value.toUpperCase())}
                 onKeyDown={(e) => handlePinKeyDown(i, e)}
-                className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl border border-white/[0.08] bg-black/20 text-center font-mono text-xl font-bold text-text-primary outline-none transition-all focus:border-emerald-500/50 focus:bg-white/[0.02]"
+                onPaste={handlePinPaste}
+                className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl border border-white/[0.08] bg-black/20 text-center font-mono text-xl font-bold text-text-primary uppercase outline-none transition-all focus:border-emerald-500/50 focus:bg-white/[0.02]"
                 autoFocus={i === 0}
               />
             ))}
@@ -214,7 +234,9 @@ export default function SharedInventoryPortal() {
               <Package size={24} className="text-emerald-500" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold tracking-tight text-text-primary">{dict.inventory}</h2>
+              <h2 className="text-2xl font-bold tracking-tight text-text-primary">
+                {dict.inventory} {loc ? `- ${loc}` : ''}
+              </h2>
               <p className="mt-1 flex items-center gap-2 text-sm text-text-secondary">
                 {filteredItems.length} ítem{filteredItems.length !== 1 ? 's' : ''} •{' '}
                 <span className="flex items-center gap-1 text-emerald-400 font-medium">
@@ -375,6 +397,7 @@ export default function SharedInventoryPortal() {
         }}
         isPartnerMode={true}
         lang={lang}
+        lockedLocation={loc || undefined}
       />
     </div>
   );
