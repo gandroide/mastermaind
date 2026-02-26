@@ -147,22 +147,36 @@ export default function BlueprintsPage() {
       {/* ── Device selector ── */}
       {!loading && !selectedId && blueprints.length > 0 && (
         <motion.div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          {blueprints.map((bp) => (
-            <motion.button key={bp.id} onClick={() => setSelectedId(bp.id)}
-              className="glass-card group flex cursor-pointer flex-col items-start p-6 text-left transition-all active:scale-[0.98] hover:border-white/15"
-              whileTap={{ scale: 0.98 }} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl"
-                style={{ background: `linear-gradient(135deg, ${activeConfig.color}20, ${activeConfig.color}08)`, border: `1px solid ${activeConfig.color}30` }}>
-                <Cpu size={22} style={{ color: activeConfig.color }} />
-              </div>
-              <h3 className="text-base font-bold text-text-primary">{bp.name}</h3>
-              {bp.description && <p className="mt-1.5 text-xs leading-relaxed text-text-tertiary line-clamp-2">{bp.description}</p>}
-              <div className="mt-4 flex items-center gap-1 text-xs font-medium text-text-tertiary group-hover:text-text-secondary">
-                <span>5 fases</span>
-                <ChevronRight size={14} className="transition-transform group-hover:translate-x-0.5" />
-              </div>
-            </motion.button>
-          ))}
+          {blueprints.map((bp) => {
+            let glyphUrl = '/glyphs/base_node_glyph_1772133744314.png'; // default fallback base node
+            const nm = bp.name.toLowerCase();
+            if (nm.includes('bread')) {
+              glyphUrl = '/glyphs/edge_processing_glyph_1772133756791.png';
+            } else if (nm.includes('health') || nm === 'bio-alert') {
+              glyphUrl = '/glyphs/base_node_glyph_1772133744314.png';
+            } else if (nm.includes('net') || nm.includes('red') || nm.includes('mesh')) {
+              glyphUrl = '/glyphs/mesh_network_glyph_1772133768410.png';
+            } else if (nm.includes('power') || nm.includes('potencia')) {
+              glyphUrl = '/glyphs/power_node_glyph_1772133780491.png';
+            }
+
+            return (
+              <motion.button key={bp.id} onClick={() => setSelectedId(bp.id)}
+                className="glass-card group flex cursor-pointer flex-col items-start p-6 text-left transition-all active:scale-[0.98] hover:border-white/15"
+                whileTap={{ scale: 0.98 }} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl overflow-hidden"
+                  style={{ background: `linear-gradient(135deg, ${activeConfig.color}20, ${activeConfig.color}08)`, border: `1px solid ${activeConfig.color}30` }}>
+                  <img src={glyphUrl} alt={`${bp.name} Glyph`} className="h-full w-full object-cover scale-[1.2] opacity-90 group-hover:opacity-100 transition-opacity mix-blend-screen" />
+                </div>
+                <h3 className="text-base font-bold text-text-primary">{bp.name}</h3>
+                {bp.description && <p className="mt-1.5 text-xs leading-relaxed text-text-tertiary line-clamp-2">{bp.description}</p>}
+                <div className="mt-4 flex items-center gap-1 text-xs font-medium text-text-tertiary group-hover:text-text-secondary">
+                  <span>5 fases</span>
+                  <ChevronRight size={14} className="transition-transform group-hover:translate-x-0.5" />
+                </div>
+              </motion.button>
+            );
+          })}
         </motion.div>
       )}
 
