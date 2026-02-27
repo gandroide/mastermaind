@@ -8,6 +8,8 @@ import { getTransactions, deleteTransaction } from '@/services/finance';
 import type { Transaction } from '@/types/database';
 import TransactionModal from '@/components/finance/TransactionModal';
 import TransactionDetailModal from '@/components/finance/TransactionDetailModal';
+import { useConfirmModal } from '@/hooks/useConfirmModal';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 import {
   WalletCards,
   ArrowUpRight,
@@ -38,6 +40,8 @@ export default function FinancePage() {
 
   // Big numbers
   const [metrics, setMetrics] = useState({ revenue: 0, expenses: 0, mrr: 0, cogs: 0 });
+
+  const confirmModal = useConfirmModal();
 
   const fetchBuId = useCallback(async () => {
     if (activeUnit === 'all') {
@@ -95,18 +99,26 @@ export default function FinancePage() {
   }, [fetchBuId]);
 
   const handleDelete = async (txId: string) => {
-    if (!confirm('¿Estás seguro de que deseas eliminar permanentemente esta transacción?')) return;
-    try {
-      await deleteTransaction(txId);
-      const newData = transactions.filter(t => t.id !== txId);
-      setTransactions(newData);
-      calculateMetrics(newData);
-      setShowDetailModal(false);
-      setSelectedTx(null);
-    } catch (err) {
-      console.error('Failed to delete transaction:', err);
-      alert('Error al eliminar la transacción');
-    }
+    confirmModal.confirm({
+      title: 'Eliminar Transacción',
+      message: '¿Estás seguro de que deseas eliminar permanentemente esta transacción? Esta acción no se puede deshacer y afectará las métricas.',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      danger: true,
+      onConfirm: async () => {
+        try {
+          await deleteTransaction(txId);
+          const newData = transactions.filter(t => t.id !== txId);
+          setTransactions(newData);
+          calculateMetrics(newData);
+          setShowDetailModal(false);
+          setSelectedTx(null);
+        } catch (err) {
+          console.error('Failed to delete transaction:', err);
+          alert('Error al eliminar la transacción');
+        }
+      }
+    });
   };
 
   if (activeUnit === 'all') {
@@ -274,6 +286,7 @@ export default function FinancePage() {
         {/* Create Modal */}
         {showCreateModal && buId && (
           <TransactionModal
+            key="modal-create-transaction"
             businessUnitId={buId}
             activeColor={config.color}
             onClose={() => setShowCreateModal(false)}
@@ -287,22 +300,33 @@ export default function FinancePage() {
         )}
 
         {/* Detail Modal */}
-        {showDetailModal && selectedTx && (
-          <TransactionDetailModal
-            transaction={selectedTx}
-            activeColor={config.color}
-            onClose={() => setShowDetailModal(false)}
-            onDelete={() => handleDelete(selectedTx.id)}
-            onEdit={() => {
-              setShowDetailModal(false);
-              setShowEditModal(true);
-            }}
-          />
-        )}
+      {showDetailModal && selectedTx && (
+        <TransactionDetailModal
+          key="modal-detail-transaction"
+          transaction={selectedTx}
+          activeColor={config.color}
+          onClose={() => setShowDetailModal(false)}
+          onEdit={() => { setShowDetailModal(false); setTimeout(() => setShowEditModal(true), 200); }}
+          onDelete={() => handleDelete(selectedTx.id)}
+        />
+      )}
+
+      <ConfirmModal
+        key="modal-confirm-action"
+        isOpen={confirmModal.isOpen}
+        onClose={confirmModal.close}
+        onConfirm={confirmModal.handleConfirm}
+        title={confirmModal.options?.title}
+        message={confirmModal.options?.message}
+        confirmText={confirmModal.options?.confirmText}
+        cancelText={confirmModal.options?.cancelText}
+        danger={confirmModal.options?.danger}
+      />
 
         {/* Edit Modal */}
         {showEditModal && selectedTx && buId && (
           <TransactionModal
+            key="modal-edit-transaction"
             businessUnitId={buId}
             activeColor={config.color}
             initialData={selectedTx}

@@ -152,139 +152,127 @@ function generatePin(): string {
   return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
 }
 
-export async function enableInventoryShare(buSlug: string, customPin?: string) {
+export async function enableInventoryShare(buSlug: string, location: string, customPin?: string) {
   const buId = await getBuId(buSlug);
   if (!buId) throw new Error('BU not found');
 
   const token = crypto.randomUUID();
   const pin = customPin || generatePin();
 
+  // Upsert the link for this BU and location
   const { data, error } = await supabase
-    .from('business_units')
-    .update({
-      inventory_share_token: token,
-      inventory_share_pin: pin,
-    })
-    .eq('id', buId)
-    .select('inventory_share_token, inventory_share_pin')
+    .from('inventory_share_links')
+    .upsert(
+      {
+        business_unit_id: buId,
+        location,
+        share_token: token,
+        share_pin: pin,
+        is_active: true
+      },
+      { onConflict: 'business_unit_id, location' }
+    )
+    .select('share_token, share_pin')
     .single();
 
   if (error || !data) throw error ?? new Error('Failed to enable inventory share');
-  return { token: data.inventory_share_token!, pin: data.inventory_share_pin! };
+  return { token: data.share_token, pin: data.share_pin };
 }
 
-export async function disableInventoryShare(buSlug: string): Promise<void> {
+export async function disableInventoryShare(buSlug: string, location: string): Promise<void> {
   const buId = await getBuId(buSlug);
   if (!buId) return;
 
   const { error } = await supabase
-    .from('business_units')
-    .update({
-      inventory_share_token: null,
-      inventory_share_pin: null,
-    })
-    .eq('id', buId);
+    .from('inventory_share_links')
+    .delete()
+    .eq('business_unit_id', buId)
+    .eq('location', location);
 
   if (error) throw error;
 }
 
-export async function setInventorySharePin(buSlug: string, pin: string) {
-  const buId = await getBuId(buSlug);
-  if (!buId) throw new Error('BU not found');
-
-  const { error } = await supabase
-    .from('business_units')
-    .update({ inventory_share_pin: pin })
-    .eq('id', buId);
-
-  if (error) throw error;
-}
-
-export async function verifyInventorySharePin(pin: string): Promise<boolean> {
-  const { data, error } = await supabase
-    .from('business_units')
-    .select('inventory_share_pin')
-    .eq('slug', 'bio-alert')
-    .single();
-
-  if (error || !data) throw new Error('Invalid setup');
-  if (pin === '__check__') return false; 
-  return data.inventory_share_pin === pin;
-}
-
-export async function getInventoryShareDetails(buSlug: string): Promise<{ token: string; pin: string } | null> {
+export async function getInventoryShareDetails(buSlug: string, location: string): Promise<{ token: string; pin: string; isActive: boolean } | null> {
   const buId = await getBuId(buSlug);
   if (!buId) return null;
 
   const { data, error } = await supabase
-    .from('business_units')
-    .select('inventory_share_token, inventory_share_pin')
-    .eq('id', buId)
+    .from('inventory_share_links')
+    .select('share_token, share_pin, is_active')
+    .eq('business_unit_id', buId)
+    .eq('location', location)
     .single();
     
-  if (error || !data?.inventory_share_token || !data?.inventory_share_pin) return null;
-  return { token: data.inventory_share_token, pin: data.inventory_share_pin };
+  if (error || !data?.share_token || !data?.share_pin) return null;
+  return { token: data.share_token, pin: data.share_pin, isActive: data.is_active };
 }
 
-export async function getPublicInventory(location?: string): Promise<InventoryItem[] | null> {
-  // We only share Bio-Alert inventory by default
-  const { data: bu, error: buError } = await supabase
-    .from('business_units')
-    .select('id')
-    .eq('slug', 'bio-alert')
+export async function verifyInventorySharePin(token: string, pin: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('inventory_share_links')
+    .select('share_pin, is_active')
+    .eq('share_token', token)
     .single();
 
-  if (buError || !bu) return null;
+  if (error || !data || !data.is_active) throw new Error('Invalid or inactive link');
+  if (pin === '__check__') return false; 
+  return data.share_pin === pin;
+}
 
-  // 2. Fetch active inventory for that BU
-  let query = supabase
+export async function getPublicInventory(token: string): Promise<InventoryItem[] | null> {
+  // 1. Resolve token to BU and location
+  const { data: link, error: linkError } = await supabase
+    .from('inventory_share_links')
+    .select('business_unit_id, location, is_active')
+    .eq('share_token', token)
+    .single();
+
+  if (linkError || !link || !link.is_active) return null;
+
+  // 2. Fetch active inventory for that BU and location
+  const { data: items, error: itemsError } = await supabase
     .from('inventory')
-    .select('*')
-    .eq('business_unit_id', bu.id)
-    .eq('is_active', true);
-
-  if (location) {
-    query = query.eq('location', location);
-  }
-
-  const { data: items, error: itemsError } = await query.order('item_name');
+    .select('*, business_unit:business_units(*)')
+    .eq('business_unit_id', link.business_unit_id)
+    .eq('location', link.location)
+    .eq('is_active', true)
+    .order('item_name');
 
   if (itemsError) return null;
   return items as InventoryItem[];
 }
 
-export async function updatePublicInventoryQuantity(itemId: string, quantity: number): Promise<void> {
-  // Hardcoded to bio-alert BU
-  const { data: bu, error: buError } = await supabase
-    .from('business_units')
-    .select('id')
-    .eq('slug', 'bio-alert')
+export async function getPublicInventoryContext(token: string) {
+  const { data: link, error } = await supabase
+    .from('inventory_share_links')
+    .select('business_unit_id, location, is_active')
+    .eq('share_token', token)
     .single();
+  if (error || !link || !link.is_active) throw new Error('Unauthorized');
+  return { buId: link.business_unit_id, location: link.location };
+}
 
-  if (buError || !bu) throw new Error('Unauthorized');
+export async function updatePublicInventoryQuantity(itemId: string, quantity: number, token: string): Promise<void> {
+  const ctx = await getPublicInventoryContext(token);
 
-  // 2. Update item (will implicitly enforce business_unit_id thanks to our RLS/DB checks implicitly or we add it explicitly)
+  // Update item ensuring it belongs to token's BU and location
   const { error } = await supabase
     .from('inventory')
     .update({ quantity })
     .eq('id', itemId)
-    .eq('business_unit_id', bu.id); // Security layer: ensuring item belongs to token's BU
+    .eq('business_unit_id', ctx.buId)
+    .eq('location', ctx.location);
 
   if (error) throw error;
 }
 
-export async function createPublicInventoryItem(payload: Omit<CreateInventoryPayload, 'business_unit_id'>): Promise<InventoryItem> {
-  const { data: bu, error: buError } = await supabase
-    .from('business_units')
-    .select('id')
-    .eq('slug', 'bio-alert')
-    .single();
+export async function createPublicInventoryItem(payload: Omit<CreateInventoryPayload, 'business_unit_id'>, token: string): Promise<InventoryItem> {
+  const ctx = await getPublicInventoryContext(token);
 
-  if (buError || !bu) throw new Error('Unauthorized');
-
+  // Force creation with the token's locked location and BU
   const { data, error } = await supabase
     .from('inventory')
-    .insert({ ...payload, business_unit_id: bu.id })
+    .insert({ ...payload, business_unit_id: ctx.buId, location: ctx.location })
     .select('*, business_unit:business_units(*)')
     .single();
 

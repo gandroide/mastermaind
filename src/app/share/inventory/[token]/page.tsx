@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getDictionary, type AppLanguage } from '@/utils/dictionaries';
-import { verifyInventorySharePin, getPublicInventory, updatePublicInventoryQuantity } from '@/services/inventory';
+import { verifyInventorySharePin, getPublicInventory, updatePublicInventoryQuantity, getPublicInventoryContext } from '@/services/inventory';
 import type { InventoryItem } from '@/types/database';
 import InventoryDetailView from '@/components/inventory/InventoryDetailView';
 import InventoryModal from '@/components/inventory/InventoryModal';
@@ -36,7 +36,6 @@ export default function SharedInventoryPortal() {
   const searchParams = useSearchParams();
   const token = params.token as string;
   const lang = searchParams.get('lang') as AppLanguage | null;
-  const loc = searchParams.get('loc'); // partner locked region
   const dict = getDictionary(lang);
 
   // Auth State
@@ -54,19 +53,28 @@ export default function SharedInventoryPortal() {
   // UI State
   const [viewingItem, setViewingItem] = useState<InventoryItem | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [loc, setLoc] = useState<string | null>(null);
 
   const handleFetchInventory = useCallback(async () => {
     setLoading(true);
-    const data = await getPublicInventory(loc || undefined); // ignores token dynamically, checks bio-alert BU
-    if (data) {
-      setItems(data);
-      setFilteredItems(data);
-    } else {
+    try {
+      const data = await getPublicInventory(token);
+      const ctx = await getPublicInventoryContext(token);
+      setLoc(ctx.location);
+      if (data) {
+        setItems(data);
+        setFilteredItems(data);
+      } else {
+        setItems([]);
+        setFilteredItems([]);
+      }
+    } catch (err) {
+      console.error(err);
       setItems([]);
       setFilteredItems([]);
     }
     setLoading(false);
-  }, []);
+  }, [token]);
 
   const handlePinChange = (index: number, value: string) => {
     if (!/^[a-zA-Z0-9]*$/.test(value)) return;
@@ -113,7 +121,7 @@ export default function SharedInventoryPortal() {
     setVerifying(true);
     setErrorVisible(false);
     try {
-      const isValid = await verifyInventorySharePin(pinStr);
+      const isValid = await verifyInventorySharePin(token, pinStr);
       if (isValid) {
         setUnlocked(true);
         await handleFetchInventory();
@@ -160,7 +168,7 @@ export default function SharedInventoryPortal() {
       setViewingItem({ ...viewingItem, quantity: newQty });
     }
     try {
-      await updatePublicInventoryQuantity(itemId, newQty);
+      await updatePublicInventoryQuantity(itemId, newQty, token);
     } catch (err) {
       console.error('Failed to update quantity', err);
       await handleFetchInventory(); // revert
@@ -398,6 +406,7 @@ export default function SharedInventoryPortal() {
         isPartnerMode={true}
         lang={lang}
         lockedLocation={loc || undefined}
+        shareToken={token}
       />
     </div>
   );

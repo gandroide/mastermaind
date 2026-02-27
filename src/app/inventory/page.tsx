@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '@/lib/store';
+import { useConfirmModal } from '@/hooks/useConfirmModal';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 import { getInventory, deleteInventoryItem, getInventoryCategories, getInventoryLocations } from '@/services/inventory';
 import type { InventoryItem } from '@/types/database';
 import InventoryModal from '@/components/inventory/InventoryModal';
@@ -41,6 +43,7 @@ export default function InventoryPage() {
   const activeConfig = useAppStore((s) => s.getActiveConfig());
 
   const [items, setItems] = useState<InventoryItem[]>([]);
+  const [filteredItems, setFilteredItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
@@ -51,11 +54,13 @@ export default function InventoryPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [contextMenu, setContextMenu] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState<string | null>(null);
+  const [modifying, setModifying] = useState<string | null>(null);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   
   const [schematicViewer, setSchematicViewer] = useState<{ url: string; title: string } | null>(null);
   const [viewingItem, setViewingItem] = useState<InventoryItem | null>(null);
+
+  const confirmModal = useConfirmModal();
 
   // Route guard flag (early return AFTER all hooks)
   const inventoryAllowed = activeUnit === 'all' || activeUnit === 'bio-alert';
@@ -67,6 +72,7 @@ export default function InventoryPage() {
       const buSlug = activeUnit === 'all' ? undefined : activeUnit;
       const data = await getInventory(buSlug, locationFilter || undefined, categoryFilter || undefined, search || undefined);
       setItems(data);
+      setFilteredItems(data); // Initialize filtered items with all items
     } catch (err) {
       console.error('Error fetching inventory:', err);
     } finally {
@@ -127,14 +133,28 @@ export default function InventoryPage() {
     );
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('¿Eliminar este ítem?')) return;
-    setDeleting(id);
-    try {
-      await deleteInventoryItem(id);
-      setItems((prev) => prev.filter((i) => i.id !== id));
-    } catch (err) { console.error(err); }
-    finally { setDeleting(null); setContextMenu(null); }
+  const handleDelete = (id: string, name: string) => {
+    setContextMenu(null);
+    confirmModal.confirm({
+      title: 'Eliminar Ítem',
+      message: `¿Estás seguro de que deseas eliminar permanentemente el ítem "${name}" de tu inventario? Esta acción no se puede deshacer.`,
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      danger: true,
+      onConfirm: async () => {
+        setModifying(id);
+        try {
+          await deleteInventoryItem(id);
+          setItems(items.filter((i) => i.id !== id));
+          setFilteredItems(filteredItems.filter((i) => i.id !== id));
+        } catch (error) {
+          console.error('Error deleting inventory item:', error);
+          alert('Error al eliminar el ítem');
+        } finally {
+          setModifying(null);
+        }
+      }
+    });
   };
 
   const handleEdit = (item: InventoryItem) => {
@@ -395,19 +415,19 @@ export default function InventoryPage() {
                                 setSchematicViewer({ url: item.schematic_url!, title: `Esquema — ${item.item_name}` });
                                 setContextMenu(null);
                               }}
-                              className="flex min-h-[44px] w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-3 text-sm text-text-secondary active:bg-white/10 hover:bg-white/5 hover:text-text-primary"
+                              className="flex min-h-[44px] w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-3 text-sm text-text-secondary active:bg-danger/10 hover:bg-danger/5"
                             >
                               <ExternalLink size={16} />
                               Ver Esquema
                             </button>
                           )}
                           <button
-                            onClick={() => handleDelete(item.id)}
-                            onTouchEnd={(e) => { e.stopPropagation(); handleDelete(item.id); }}
-                            disabled={deleting === item.id}
+                            onClick={() => handleDelete(item.id, item.item_name)}
+                            onTouchEnd={(e) => { e.stopPropagation(); handleDelete(item.id, item.item_name); }}
+                            disabled={modifying === item.id}
                             className="flex min-h-[44px] w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-3 text-sm text-danger active:bg-danger/10 hover:bg-danger/5"
                           >
-                            {deleting === item.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                            {modifying === item.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
                             Eliminar
                           </button>
                         </motion.div>

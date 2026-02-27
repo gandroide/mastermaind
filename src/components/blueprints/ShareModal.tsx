@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { enableShare, disableShare } from '@/services/blueprints';
+import { useConfirmModal } from '@/hooks/useConfirmModal';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 import type { Blueprint } from '@/types/database';
 import {
   X,
@@ -33,6 +35,8 @@ export default function ShareModal({ blueprint, onClose, onUpdated }: Props) {
   const [showPin, setShowPin] = useState(false);
   const [shareLang, setShareLang] = useState<'es' | 'pt'>('es');
 
+  const confirmModal = useConfirmModal();
+
   const isActive = !!shareToken;
   const baseUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/share/blueprint/${shareToken}`
@@ -53,27 +57,43 @@ export default function ShareModal({ blueprint, onClose, onUpdated }: Props) {
   };
 
   const handleDisable = async () => {
-    if (!confirm('¿Desactivar el enlace público? Los técnicos ya no podrán acceder.')) return;
-    setLoading(true);
-    try {
-      await disableShare(blueprint.id);
-      setShareToken(null);
-      setSharePin(null);
-      onUpdated();
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
+    confirmModal.confirm({
+      title: 'Desactivar Enlace Público',
+      message: '¿Estás seguro de que deseas desactivar este enlace? Los técnicos externos ya no tendrán acceso a la documentación.',
+      confirmText: 'Desactivar',
+      cancelText: 'Cancelar',
+      danger: true,
+      onConfirm: async () => {
+        setLoading(true);
+        try {
+          await disableShare(blueprint.id);
+          setShareToken(null);
+          setSharePin(null);
+          onUpdated();
+        } catch (err) { console.error(err); }
+        finally { setLoading(false); }
+      }
+    });
   };
 
   const handleRegenerate = async () => {
-    if (!confirm('¿Regenerar token y PIN? El enlace anterior dejará de funcionar.')) return;
-    setLoading(true);
-    try {
-      const result = await enableShare(blueprint.id);
-      setShareToken(result.token);
-      setSharePin(result.pin);
-      onUpdated();
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
+    confirmModal.confirm({
+      title: 'Regenerar Credenciales',
+      message: '¿Estás seguro de que deseas generar un nuevo Token y PIN? Cuidado: el enlace anterior dejará de funcionar inmediatamente.',
+      confirmText: 'Regenerar',
+      cancelText: 'Cancelar',
+      danger: true,
+      onConfirm: async () => {
+        setLoading(true);
+        try {
+          const result = await enableShare(blueprint.id);
+          setShareToken(result.token);
+          setSharePin(result.pin);
+          onUpdated();
+        } catch (err) { console.error(err); }
+        finally { setLoading(false); }
+      }
+    });
   };
 
   // Robust clipboard (iOS-safe)
@@ -204,21 +224,31 @@ export default function ShareModal({ blueprint, onClose, onUpdated }: Props) {
 
               {/* Actions */}
               <div className="flex gap-2 pt-1">
-                <button onClick={handleRegenerate} disabled={loading}
-                  className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-white/10 py-2.5 text-xs font-medium text-text-secondary transition-all hover:bg-white/5">
-                  {loading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-                  Regenerar
-                </button>
-                <button onClick={handleDisable} disabled={loading}
-                  className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-danger/20 py-2.5 text-xs font-medium text-danger transition-all hover:bg-danger/5">
-                  <Unlink size={12} />
-                  Desactivar
-                </button>
-              </div>
+                  <button onClick={handleRegenerate} disabled={loading}
+                    className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-white/5 bg-white/5 py-2.5 text-xs font-medium text-text-primary transition-colors hover:bg-white/10 active:scale-95">
+                    <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Regenerar
+                  </button>
+                  <button onClick={handleDisable} disabled={loading}
+                    className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-danger/10 bg-danger/5 py-2.5 text-xs font-medium text-danger transition-colors hover:bg-danger/10 active:scale-95">
+                    <Unlink size={14} /> Desactivar Enlace Público
+                  </button>
+                </div>
             </div>
           )}
         </div>
       </motion.div>
+
+      {/* Confirm Modal Rendered at top level */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={confirmModal.close}
+        onConfirm={confirmModal.handleConfirm}
+        title={confirmModal.options?.title}
+        message={confirmModal.options?.message}
+        confirmText={confirmModal.options?.confirmText}
+        cancelText={confirmModal.options?.cancelText}
+        danger={confirmModal.options?.danger}
+      />
     </div>
   );
 }

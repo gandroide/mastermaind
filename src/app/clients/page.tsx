@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore, BUSINESS_UNITS } from '@/lib/store';
 import { getClients, deleteClient } from '@/services/clients';
-import type { Client } from '@/types/database';
+import { supabase } from '@/lib/supabase';
+import { useConfirmModal } from '@/hooks/useConfirmModal';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 import ClientModal from '@/components/clients/ClientModal';
 import ClientDetailModal from '@/components/clients/ClientDetailModal';
+import type { Client } from '@/types/database';
 import {
   Plus,
   Search,
@@ -44,6 +47,11 @@ export default function ClientsPage() {
   const activeConfig = useAppStore((s) => s.getActiveConfig());
 
   const [clients, setClients] = useState<Client[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [filtered, setFiltered] = useState<Client[]>([]); // Added for consistency with handleDelete
+  
+  const confirmModal = useConfirmModal();
+
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
@@ -58,6 +66,7 @@ export default function ClientsPage() {
       const buSlug = activeUnit === 'all' ? undefined : activeUnit;
       const data = await getClients(buSlug, search || undefined);
       setClients(data);
+      setFiltered(data); // Initialize filtered with fetched data
     } catch (err) {
       console.error('Error fetching clients:', err);
     } finally {
@@ -100,18 +109,28 @@ export default function ClientsPage() {
     };
   }, [contextMenu]);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('¿Desactivar este cliente?')) return;
-    setDeleting(id);
-    try {
-      await deleteClient(id);
-      setClients((prev) => prev.filter((c) => c.id !== id));
-    } catch (err) {
-      console.error('Error deleting client:', err);
-    } finally {
-      setDeleting(null);
-      setContextMenu(null);
-    }
+  const handleDelete = async (id: string, name: string) => {
+    setContextMenu(null);
+    confirmModal.confirm({
+      title: 'Desactivar Cliente',
+      message: `¿Estás seguro de que deseas archivar al cliente "${name}"? No se eliminará de la base de datos, pero dejará de estar visible en las listas principales.`,
+      confirmText: 'Desactivar',
+      cancelText: 'Cancelar',
+      danger: true,
+      onConfirm: async () => {
+        setDeleting(id);
+        try {
+          await deleteClient(id);
+          setClients(clients.filter((c) => c.id !== id));
+          setFiltered(filtered.filter((c) => c.id !== id));
+        } catch (error) {
+          console.error('Error deleting client:', error);
+          alert('Hubo un error al eliminar el cliente');
+        } finally {
+          setDeleting(null);
+        }
+      }
+    });
   };
 
   const handleEdit = (client: Client) => {
@@ -299,14 +318,14 @@ export default function ClientsPage() {
                             <button
                               onClick={() => handleEdit(client)}
                               onTouchEnd={(e) => { e.stopPropagation(); handleEdit(client); }}
-                              className="flex min-h-[44px] w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-3 text-sm text-text-secondary active:bg-white/10 hover:bg-white/5 hover:text-text-primary"
+                              className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium text-text-primary transition-all hover:bg-white/10 active:scale-95"
+                              style={{ touchAction: 'manipulation' }}
                             >
-                              <Pencil size={16} />
-                              Editar
+                              <Pencil size={16} /> Editar
                             </button>
                             <button
-                              onClick={() => handleDelete(client.id)}
-                              onTouchEnd={(e) => { e.stopPropagation(); handleDelete(client.id); }}
+                              onClick={() => handleDelete(client.id, client.name)}
+                              onTouchEnd={(e) => { e.stopPropagation(); handleDelete(client.id, client.name); }}
                               disabled={deleting === client.id}
                               className="flex min-h-[44px] w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-3 text-sm text-danger active:bg-danger/10 hover:bg-danger/5"
                             >

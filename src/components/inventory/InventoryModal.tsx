@@ -19,6 +19,7 @@ interface Props {
   isPartnerMode?: boolean;
   lang?: AppLanguage | null;
   lockedLocation?: string;
+  shareToken?: string;
 }
 
 const overlayVariants = { hidden: { opacity: 0 }, visible: { opacity: 1 } };
@@ -30,7 +31,7 @@ const modalVariants = {
 
 const LOCATION_OPTIONS = ['Dominicana', 'Portugal', 'Argentina'];
 
-export default function InventoryModal({ open, onClose, onSaved, item, isPartnerMode = false, lang = 'es', lockedLocation }: Props) {
+export default function InventoryModal({ open, onClose, onSaved, item, isPartnerMode = false, lang = 'es', lockedLocation, shareToken }: Props) {
   const activeConfig = useAppStore((s) => s.getActiveConfig());
   const activeUnit = useAppStore((s) => s.activeUnit);
   const isEditing = !!item;
@@ -143,7 +144,8 @@ export default function InventoryModal({ open, onClose, onSaved, item, isPartner
           schematic_url: schematicUrl || undefined,
           notes: notes.trim() || undefined,
         };
-        await createPublicInventoryItem(publicPayload);
+        if (!shareToken) throw new Error("Missing shareToken for partner creation");
+        await createPublicInventoryItem(publicPayload, shareToken);
       } else {
         const payload: CreateInventoryPayload = {
           business_unit_id: businessUnitId,

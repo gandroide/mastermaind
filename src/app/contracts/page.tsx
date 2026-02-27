@@ -10,6 +10,8 @@ import type { Contract, ContractStatus, Client } from '@/types/database';
 import ContractModal from '@/components/contracts/ContractModal';
 import ContractSigner from '@/components/contracts/ContractSigner';
 import ContractDetailModal from '@/components/contracts/ContractDetailModal';
+import { useConfirmModal } from '@/hooks/useConfirmModal';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 import {
   Plus,
   Search,
@@ -65,6 +67,8 @@ export default function ContractsPage() {
   const [viewingContract, setViewingContract] = useState<Contract | null>(null);
   const [contextMenu, setContextMenu] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+
+  const confirmModal = useConfirmModal();
 
   const fetchContracts = useCallback(async () => {
     setLoading(true);
@@ -123,14 +127,27 @@ export default function ContractsPage() {
     };
   }, [contextMenu]);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('¿Eliminar este contrato?')) return;
-    setDeleting(id);
-    try {
-      await deleteContract(id);
-      setContracts((prev) => prev.filter((c) => c.id !== id));
-    } catch (err) { console.error(err); }
-    finally { setDeleting(null); setContextMenu(null); }
+  const handleDelete = (id: string, name: string) => {
+    setContextMenu(null);
+    confirmModal.confirm({
+      title: 'Eliminar Contrato',
+      message: `¿Estás seguro de que deseas eliminar permanentemente el contrato "${name}"? Esta acción no se puede deshacer.`,
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      danger: true,
+      onConfirm: async () => {
+        setDeleting(id);
+        try {
+          await deleteContract(id);
+          setContracts(contracts.filter((c) => c.id !== id));
+        } catch (error) {
+          console.error('Error deleting contract:', error);
+          alert('Hubo un error al eliminar el contrato');
+        } finally {
+          setDeleting(null);
+        }
+      }
+    });
   };
 
   const handleEdit = (contract: Contract) => {
@@ -367,10 +384,10 @@ export default function ContractsPage() {
                                 Ver Firmado
                               </a>
                             )}
-                            <button
-                              onClick={() => handleDelete(contract.id)}
-                              onTouchEnd={(e) => { e.stopPropagation(); handleDelete(contract.id); }}
-                              disabled={deleting === contract.id}
+                              <button
+                                onClick={() => handleDelete(contract.id, contract.client?.name || 'este contrato')}
+                                onTouchEnd={(e) => { e.stopPropagation(); handleDelete(contract.id, contract.client?.name || 'este contrato'); }}
+                                disabled={deleting === contract.id}
                               className="flex min-h-[44px] w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-3 text-sm text-danger active:bg-danger/10 hover:bg-danger/5"
                             >
                               {deleting === contract.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
@@ -465,6 +482,18 @@ export default function ContractsPage() {
           onClose={handleSignerClose}
         />
       )}
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={confirmModal.close}
+        onConfirm={confirmModal.handleConfirm}
+        title={confirmModal.options?.title}
+        message={confirmModal.options?.message}
+        confirmText={confirmModal.options?.confirmText}
+        cancelText={confirmModal.options?.cancelText}
+        danger={confirmModal.options?.danger}
+      />
     </div>
   );
 }

@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { disableInventoryShare, enableInventoryShare, getInventoryShareDetails } from '@/services/inventory';
+import { useConfirmModal } from '@/hooks/useConfirmModal';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 import {
   X,
   Share2,
@@ -33,14 +35,20 @@ export default function ShareInventoryModal({ activeUnit, onClose, defaultLocati
   const [shareLang, setShareLang] = useState<'es' | 'pt'>('es');
   const [shareLoc, setShareLoc] = useState(defaultLocation || 'Dominicana');
 
-  // Load existing details
+  const confirmModal = useConfirmModal();
+
+  // Load existing details for selected location
   useEffect(() => {
     async function load() {
+      setLoading(true);
       try {
-        const details = await getInventoryShareDetails(activeUnit);
-        if (details) {
+        const details = await getInventoryShareDetails(activeUnit, shareLoc);
+        if (details && details.isActive) {
           setShareToken(details.token);
           setSharePin(details.pin);
+        } else {
+          setShareToken(null);
+          setSharePin(null);
         }
       } catch (err) {
         console.error(err);
@@ -49,19 +57,19 @@ export default function ShareInventoryModal({ activeUnit, onClose, defaultLocati
       }
     }
     load();
-  }, [activeUnit]);
+  }, [activeUnit, shareLoc]);
 
   const isActive = !!shareToken;
   const baseUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/share/inventory/${shareToken}`
     : '';
-  const shareUrl = `${baseUrl}?lang=${shareLang}&loc=${encodeURIComponent(shareLoc)}`;
+  const shareUrl = `${baseUrl}?lang=${shareLang}`;
 
   const handleEnable = async () => {
     setLoading(true);
     try {
       const pin = customPin.trim() || undefined;
-      const result = await enableInventoryShare(activeUnit, pin);
+      const result = await enableInventoryShare(activeUnit, shareLoc, pin);
       setShareToken(result.token);
       setSharePin(result.pin);
       setCustomPin('');
@@ -73,31 +81,47 @@ export default function ShareInventoryModal({ activeUnit, onClose, defaultLocati
   };
 
   const handleDisable = async () => {
-    if (!confirm('¿Desactivar el enlace público? Los socios ya no podrán acceder.')) return;
-    setLoading(true);
-    try {
-      await disableInventoryShare(activeUnit);
-      setShareToken(null);
-      setSharePin(null);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+    confirmModal.confirm({
+      title: 'Desactivar Enlace Público',
+      message: '¿Estás seguro de que deseas desactivar este enlace? Los socios ya no tendrán acceso al inventario de esta región.',
+      confirmText: 'Desactivar',
+      cancelText: 'Cancelar',
+      danger: true,
+      onConfirm: async () => {
+        setLoading(true);
+        try {
+          await disableInventoryShare(activeUnit, shareLoc);
+          setShareToken(null);
+          setSharePin(null);
+        } catch (err) {
+          console.error(err);
+        } finally {
+          setLoading(false);
+        }
+      }
+    });
   };
 
   const handleRegenerate = async () => {
-    if (!confirm('¿Regenerar token y PIN? El enlace anterior dejará de funcionar.')) return;
-    setLoading(true);
-    try {
-      const result = await enableInventoryShare(activeUnit);
-      setShareToken(result.token);
-      setSharePin(result.pin);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+    confirmModal.confirm({
+      title: 'Regenerar Credenciales',
+      message: '¿Estás seguro de que deseas generar un nuevo Token y PIN? El enlace anterior para esta región dejará de funcionar inmediatamente.',
+      confirmText: 'Regenerar',
+      cancelText: 'Cancelar',
+      danger: true,
+      onConfirm: async () => {
+        setLoading(true);
+        try {
+          const result = await enableInventoryShare(activeUnit, shareLoc);
+          setShareToken(result.token);
+          setSharePin(result.pin);
+        } catch (err) {
+          console.error(err);
+        } finally {
+          setLoading(false);
+        }
+      }
+    });
   };
 
   // Robust clipboard (iOS-safe)
@@ -146,17 +170,31 @@ export default function ShareInventoryModal({ activeUnit, onClose, defaultLocati
 
         <div className="p-6 space-y-5">
           <p className="text-xs text-text-tertiary">
-            <span className="font-semibold text-text-secondary capitalize">{activeUnit}</span> — genera un enlace protegido por
-            PIN para compartir el inventario de esta unidad con socios externos.
+            <span className="font-semibold text-text-secondary capitalize">{activeUnit}</span> — administra los accesos seguros a
+            inventario por ubicación para tus socios externos.
           </p>
 
-          {loading && !isActive && shareToken === null ? (
+          {/* Region Selector happens always */}
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-text-tertiary">Región del Socio</label>
+            <select
+              value={shareLoc}
+              onChange={(e) => setShareLoc(e.target.value)}
+              className="w-full rounded-xl border border-white/[0.06] bg-black/40 px-3 py-2 text-sm text-text-primary outline-none focus:border-emerald-500/50"
+            >
+              <option value="Dominicana">Dominicana</option>
+              <option value="Portugal">Portugal</option>
+              <option value="Argentina">Argentina</option>
+            </select>
+          </div>
+
+          {loading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 size={24} className="animate-spin text-emerald-500" />
             </div>
           ) : !isActive ? (
             /* ── Inactive state ── */
-            <div className="space-y-4">
+            <div className="space-y-4 pt-2 border-t border-white/[0.06]">
               <div>
                 <label className="mb-1.5 text-xs font-medium text-text-secondary">PIN personalizado (opcional)</label>
                 <input type="text" value={customPin} onChange={(e) => setCustomPin(e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 6))}
@@ -204,19 +242,6 @@ export default function ShareInventoryModal({ activeUnit, onClose, defaultLocati
                   </div>
                 </div>
 
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-text-tertiary">Región del Socio</label>
-                  <select
-                    value={shareLoc}
-                    onChange={(e) => setShareLoc(e.target.value)}
-                    className="w-full rounded-xl border border-white/[0.06] bg-black/40 px-3 py-2 text-sm text-text-primary outline-none focus:border-emerald-500/50"
-                  >
-                    <option value="Dominicana">Dominicana</option>
-                    <option value="Portugal">Portugal</option>
-                    <option value="Argentina">Argentina</option>
-                  </select>
-                </div>
-
                 <div className="glass flex items-center gap-2 rounded-xl px-3 py-2.5">
                   <p className="flex-1 truncate text-[11px] font-mono text-text-secondary">{shareUrl}</p>
                   <button onClick={() => copyToClipboard(shareUrl, 'url')}
@@ -250,20 +275,30 @@ export default function ShareInventoryModal({ activeUnit, onClose, defaultLocati
               {/* Actions */}
               <div className="flex gap-2 pt-1">
                 <button onClick={handleRegenerate} disabled={loading}
-                  className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-white/10 py-2.5 text-xs font-medium text-text-secondary transition-all hover:bg-white/5">
-                  {loading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-                  Regenerar
+                  className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-white/5 bg-white/5 py-2.5 text-xs font-medium text-text-primary transition-colors hover:bg-white/10 active:scale-95">
+                  {loading ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />} Regenerar
                 </button>
                 <button onClick={handleDisable} disabled={loading}
-                  className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-danger/20 py-2.5 text-xs font-medium text-danger transition-all hover:bg-danger/5">
-                  <Unlink size={12} />
-                  Desactivar
+                  className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-danger/10 bg-danger/5 py-2.5 text-xs font-medium text-danger transition-colors hover:bg-danger/10 active:scale-95">
+                  <Unlink size={14} /> Desactivar Enlace Público
                 </button>
               </div>
             </div>
           )}
         </div>
       </motion.div>
+
+      {/* Confirm Modal Rendered at top level */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={confirmModal.close}
+        onConfirm={confirmModal.handleConfirm}
+        title={confirmModal.options?.title}
+        message={confirmModal.options?.message}
+        confirmText={confirmModal.options?.confirmText}
+        cancelText={confirmModal.options?.cancelText}
+        danger={confirmModal.options?.danger}
+      />
     </div>
   );
 }
