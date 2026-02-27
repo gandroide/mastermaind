@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore, BUSINESS_UNITS } from '@/lib/store';
 import { getClients, deleteClient } from '@/services/clients';
-import { formatCurrency } from '@/lib/utils';
 import type { Client } from '@/types/database';
 import ClientModal from '@/components/clients/ClientModal';
 import ClientDetailModal from '@/components/clients/ClientDetailModal';
@@ -77,6 +76,30 @@ export default function ClientsPage() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
+  // Close context menu on outside tap/click (iOS-safe, no backdrop overlay)
+  useEffect(() => {
+    if (!contextMenu) return;
+
+    const handleOutside = (e: Event) => {
+      const target = e.target as HTMLElement;
+      // If tap/click is inside the menu or kebab button, let it through
+      if (target.closest('[data-context-menu]')) return;
+      setContextMenu(null);
+    };
+
+    // Small delay so the opening tap doesn't immediately close the menu
+    const timer = setTimeout(() => {
+      document.addEventListener('mousedown', handleOutside, true);
+      document.addEventListener('touchend', handleOutside, true);
+    }, 50);
+
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('mousedown', handleOutside, true);
+      document.removeEventListener('touchend', handleOutside, true);
+    };
+  }, [contextMenu]);
+
   const handleDelete = async (id: string) => {
     if (!confirm('¿Desactivar este cliente?')) return;
     setDeleting(id);
@@ -108,7 +131,7 @@ export default function ClientsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-7xl">
+    <div className="mx-auto max-w-7xl relative">
       {/* Header */}
       <motion.div
         className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
@@ -213,51 +236,56 @@ export default function ClientsPage() {
               const bu = client.business_unit;
               const buConfig = BUSINESS_UNITS.find((u) => u.id === bu?.slug) ?? BUSINESS_UNITS[0];
               const buColor = bu?.color ?? buConfig.color;
+              const isMenuOpen = contextMenu === client.id;
 
               return (
                 <motion.div
                   key={client.id}
-                  onClick={() => setViewingClient(client)}
+                  onClick={(e) => {
+                    if ((e.target as HTMLElement).closest('[data-context-menu]')) return;
+                    setViewingClient(client);
+                  }}
                   variants={rowVariants}
                   exit="exit"
                   layout
-                  className="glass-card group relative overflow-hidden p-5 transition-all hover:border-white/15 cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
+                  className={`cursor-pointer glass-card group relative p-5 transition-all hover:border-white/15 hover:scale-[1.01] active:scale-[0.99] ${
+                    contextMenu === client.id ? 'z-[60] overflow-visible' : 'overflow-hidden'
+                  }`}
                 >
                   {/* Header row */}
                   <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="flex h-10 w-10 items-center justify-center rounded-xl text-sm font-bold"
-                        style={{
-                          background: `${buColor}15`,
-                          color: buColor,
-                        }}
-                      >
+                    <div className="flex-1 pr-4">
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        <div
+                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold"
+                          style={{
+                            background: `${buColor}15`,
+                            color: buColor,
+                          }}
+                        >
                         {client.name.charAt(0).toUpperCase()}
                       </div>
-                      <div>
-                        <h3 className="text-sm font-semibold text-text-primary truncate max-w-[180px]">
+                      <div className="overflow-hidden">
+                        <h3 className="text-sm font-semibold text-text-primary truncate">
                           {client.name}
                         </h3>
                         {client.company && (
-                          <p className="flex items-center gap-1 text-xs text-text-tertiary truncate max-w-[180px]">
+                          <div className="flex items-center gap-1 text-xs text-text-tertiary mt-0.5">
                             <Building2 size={11} className="shrink-0" />
                             <span className="truncate">{client.company}</span>
-                          </p>
+                          </div>
                         )}
                       </div>
                     </div>
+                  </div>
 
-                    {/* Context menu */}
-                    <div className="relative">
+                  {/* Context menu */}
+                    <div className="relative" data-context-menu>
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setContextMenu(contextMenu === client.id ? null : client.id);
-                        }}
-                        className="touch-target flex items-center justify-center rounded-lg p-2 text-text-tertiary opacity-0 transition-all hover:bg-white/5 hover:text-text-primary group-hover:opacity-100"
+                        onClick={() => setContextMenu(contextMenu === client.id ? null : client.id)}
+                        className="flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center rounded-lg p-3 text-text-tertiary transition-all hover:bg-white/5 hover:text-text-primary md:opacity-0 md:group-hover:opacity-100"
                       >
-                        <MoreVertical size={16} />
+                        <MoreVertical size={18} />
                       </button>
 
                       <AnimatePresence>
@@ -266,24 +294,26 @@ export default function ClientsPage() {
                             initial={{ opacity: 0, scale: 0.95, y: -4 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: -4 }}
-                            className="absolute right-0 top-10 z-50 w-40 overflow-hidden rounded-xl bg-[#1a1a2e]/98 backdrop-blur-xl border border-white/10 shadow-2xl py-1"
+                            className="absolute right-0 top-14 z-50 w-48 rounded-xl border border-zinc-700/50 bg-[#1a1a2e]/[0.97] p-2 shadow-2xl shadow-black/60 backdrop-blur-sm"
                           >
                             <button
-                              onClick={(e) => { e.stopPropagation(); handleEdit(client); }}
-                              className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-text-secondary hover:bg-white/5 hover:text-text-primary"
+                              onClick={() => handleEdit(client)}
+                              onTouchEnd={(e) => { e.stopPropagation(); handleEdit(client); }}
+                              className="flex min-h-[44px] w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-3 text-sm text-text-secondary active:bg-white/10 hover:bg-white/5 hover:text-text-primary"
                             >
-                              <Pencil size={14} />
+                              <Pencil size={16} />
                               Editar
                             </button>
                             <button
-                              onClick={(e) => { e.stopPropagation(); handleDelete(client.id); }}
+                              onClick={() => handleDelete(client.id)}
+                              onTouchEnd={(e) => { e.stopPropagation(); handleDelete(client.id); }}
                               disabled={deleting === client.id}
-                              className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-danger hover:bg-danger/5"
+                              className="flex min-h-[44px] w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-3 text-sm text-danger active:bg-danger/10 hover:bg-danger/5"
                             >
                               {deleting === client.id ? (
-                                <Loader2 size={14} className="animate-spin" />
+                                <Loader2 size={16} className="animate-spin" />
                               ) : (
-                                <Trash2 size={14} />
+                                <Trash2 size={16} />
                               )}
                               Desactivar
                             </button>
@@ -293,8 +323,8 @@ export default function ClientsPage() {
                     </div>
                   </div>
 
-                  {/* Contact info */}
-                  <div className="mt-4 space-y-2">
+                  {/* Contact info - Solucionado el bug de texto duplicado */}
+                  <div className="mt-4 space-y-2 overflow-hidden">
                     {client.email && (
                       <div className="flex items-center gap-2 text-xs text-text-secondary">
                         <Mail size={12} className="shrink-0 text-text-tertiary" />
@@ -350,13 +380,7 @@ export default function ClientsPage() {
         </motion.div>
       )}
 
-      {/* Close context menu on outside click */}
-      {contextMenu && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={(e) => { e.stopPropagation(); setContextMenu(null); }}
-        />
-      )}
+      {/* Context menu is closed via document-level listener (useEffect above) — no backdrop overlay needed */}
 
       {/* Client Edit/Create Modal */}
       <ClientModal
@@ -373,7 +397,7 @@ export default function ClientsPage() {
         client={viewingClient}
         onEdit={(client) => {
           setViewingClient(null);
-          handleEdit(client);
+          setTimeout(() => handleEdit(client), 50); // Pequeño delay para evitar choques visuales
         }}
       />
     </div>
