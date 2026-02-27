@@ -283,7 +283,7 @@ export default function ClientsPage() {
                     <div className="relative" data-context-menu>
                       <button
                         onClick={() => setContextMenu(contextMenu === client.id ? null : client.id)}
-                        className="flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center rounded-lg p-3 text-text-tertiary transition-all hover:bg-white/5 hover:text-text-primary md:opacity-0 md:group-hover:opacity-100"
+                        className="flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center rounded-lg p-3 text-text-tertiary transition-all hover:bg-white/5 hover:text-text-primary"
                       >
                         <MoreVertical size={18} />
                       </button>
