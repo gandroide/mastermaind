@@ -10,6 +10,7 @@ import type { Contract, ContractStatus, Client } from '@/types/database';
 import ContractModal from '@/components/contracts/ContractModal';
 import ContractSigner from '@/components/contracts/ContractSigner';
 import ContractDetailModal from '@/components/contracts/ContractDetailModal';
+import ShareDropzoneModal from '@/components/contracts/ShareDropzoneModal';
 import { useConfirmModal } from '@/hooks/useConfirmModal';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import {
@@ -25,6 +26,7 @@ import {
   Filter,
   ChevronDown,
   ExternalLink,
+  UploadCloud,
 } from 'lucide-react';
 
 const STATUS_CONFIG: Record<ContractStatus, { label: string; color: string }> = {
@@ -62,6 +64,7 @@ export default function ContractsPage() {
   const [showFilters, setShowFilters] = useState(false);
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
   const [signerContract, setSignerContract] = useState<Contract | null>(null);
   const [viewingContract, setViewingContract] = useState<Contract | null>(null);
@@ -180,14 +183,23 @@ export default function ContractsPage() {
             <span style={{ color: activeConfig.color }}>{activeConfig.label}</span>
           </p>
         </div>
-        <button
-          onClick={() => setModalOpen(true)}
-          className="touch-target flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-text-inverse transition-all hover:scale-[1.02] active:scale-[0.98]"
-          style={{ background: `linear-gradient(135deg, ${activeConfig.color}, ${activeConfig.color}cc)` }}
-        >
-          <Plus size={18} />
-          Nuevo Contrato
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShareModalOpen(true)}
+            className="touch-target flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-text-primary transition-all hover:bg-white/10 active:scale-[0.98]"
+          >
+            <UploadCloud size={18} />
+            <span className="hidden sm:inline">Buzón Público</span>
+          </button>
+          <button
+            onClick={() => setModalOpen(true)}
+            className="touch-target flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-text-inverse transition-all hover:scale-[1.02] active:scale-[0.98]"
+            style={{ background: `linear-gradient(135deg, ${activeConfig.color}, ${activeConfig.color}cc)` }}
+          >
+            <Plus size={18} />
+            Nuevo Contrato
+          </button>
+        </div>
       </motion.div>
 
       {/* Search + Filters */}
@@ -482,6 +494,14 @@ export default function ContractsPage() {
           onClose={handleSignerClose}
         />
       )}
+
+      <AnimatePresence>
+        {shareModalOpen && (
+          <ShareDropzoneModal
+            onClose={() => setShareModalOpen(false)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Confirm Modal */}
       <ConfirmModal

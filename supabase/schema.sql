@@ -187,3 +187,23 @@ CREATE INDEX idx_blueprint_materials_blueprint ON blueprint_materials(blueprint_
 
 CREATE TRIGGER trg_blueprints_updated       BEFORE UPDATE ON blueprints       FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER trg_blueprint_phases_updated  BEFORE UPDATE ON blueprint_phases FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- ── Contract Dropzone Links (Public Upload Portal) ──
+CREATE TABLE IF NOT EXISTS contract_dropzone_links (
+  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  business_unit_id UUID NOT NULL REFERENCES business_units(id) ON DELETE CASCADE,
+  share_token      UUID DEFAULT gen_random_uuid() UNIQUE NOT NULL,
+  is_active        BOOLEAN DEFAULT TRUE,
+  created_at       TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE contract_dropzone_links ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Enable read for public with active token"
+  ON contract_dropzone_links FOR SELECT
+  USING (is_active = true);
+
+CREATE POLICY "Enable all for authenticated users"
+  ON contract_dropzone_links FOR ALL
+  TO authenticated
+  USING (true);

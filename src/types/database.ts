@@ -215,3 +215,15 @@ export interface Transaction {
   created_at: string;
   updated_at: string;
 }
+
+// ── Contract Dropzone Links ──
+export interface ContractDropzoneLink {
+  id: string;
+  business_unit_id: string;
+  share_token: string;
+  is_active: boolean;
+  created_at: string;
+  // Joined
+  business_unit?: BusinessUnit;
+}
+

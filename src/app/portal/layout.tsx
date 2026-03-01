@@ -1,6 +1,6 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, usePathname } from 'next/navigation';
 import { Suspense } from 'react';
 import { Package, ShieldX } from 'lucide-react';
 
@@ -22,7 +22,13 @@ export function getPortalLocation(token: string | null): { valid: boolean; locat
 
 function PortalGate({ children }: { children: React.ReactNode }) {
   const params = useSearchParams();
+  const pathname = usePathname();
   const token = params.get('token');
+  
+  if (pathname?.includes('/contracts/upload')) {
+    return <>{children}</>;
+  }
+
   const { valid, label } = getPortalLocation(token);
 
   if (!valid) {
