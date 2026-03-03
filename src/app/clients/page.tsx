@@ -318,10 +318,10 @@ export default function ClientsPage() {
                             <button
                               onClick={() => handleEdit(client)}
                               onTouchEnd={(e) => { e.stopPropagation(); handleEdit(client); }}
-                              className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium text-text-primary transition-all hover:bg-white/10 active:scale-95"
-                              style={{ touchAction: 'manipulation' }}
+                              className="flex min-h-[44px] w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-3 text-sm text-text-secondary active:bg-white/10 hover:bg-white/5 hover:text-text-primary"
                             >
-                              <Pencil size={16} /> Editar
+                              <Pencil size={16} />
+                              Editar
                             </button>
                             <button
                               onClick={() => handleDelete(client.id, client.name)}
@@ -418,6 +418,18 @@ export default function ClientsPage() {
           setViewingClient(null);
           setTimeout(() => handleEdit(client), 50); // Pequeño delay para evitar choques visuales
         }}
+      />
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={confirmModal.close}
+        onConfirm={confirmModal.handleConfirm}
+        title={confirmModal.options?.title}
+        message={confirmModal.options?.message}
+        confirmText={confirmModal.options?.confirmText}
+        cancelText={confirmModal.options?.cancelText}
+        danger={confirmModal.options?.danger}
       />
     </div>
   );
