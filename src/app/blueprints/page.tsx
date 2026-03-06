@@ -154,6 +154,8 @@ export default function BlueprintsPage() {
               glyphUrl = '/glyphs/edge_processing_glyph_1772133756791.png';
             } else if (nm.includes('health') || nm === 'bio-alert') {
               glyphUrl = '/glyphs/base_node_glyph_1772133744314.png';
+            } else if (nm.includes('data mule') || nm.includes('recolector')) {
+              glyphUrl = '/glyphs/data_mule_glyph.png';
             } else if (nm.includes('net') || nm.includes('red') || nm.includes('mesh')) {
               glyphUrl = '/glyphs/mesh_network_glyph_1772133768410.png';
             } else if (nm.includes('power') || nm.includes('potencia')) {
