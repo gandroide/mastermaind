@@ -228,8 +228,8 @@ export default function SharedInventoryPortal() {
 
   // --- Render Public Portal ---
   return (
-    <div className="min-h-[100dvh] bg-background">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div className="flex h-[100dvh] w-full flex-col bg-background overflow-hidden items-center">
+      <div className="flex-1 w-full max-w-7xl overflow-y-auto overflow-x-hidden px-4 py-8 sm:px-6 lg:px-8">
         
         {/* Header */}
         <motion.div

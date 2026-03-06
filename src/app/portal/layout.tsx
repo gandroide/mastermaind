@@ -49,7 +49,7 @@ function PortalGate({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-dvh flex-col bg-surface-0">
+    <div className="flex h-dvh w-full flex-col bg-surface-0 overflow-hidden">
       {/* Minimal header */}
       <header className="glass sticky top-0 z-30 border-b border-white/[0.06] px-4 py-3">
         <div className="mx-auto flex max-w-lg items-center justify-between">
@@ -66,7 +66,7 @@ function PortalGate({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Content */}
-      <main className="flex-1 overflow-y-auto p-4">
+      <main className="flex-1 overflow-y-auto overflow-x-hidden p-4">
         <div className="mx-auto max-w-lg">
           {children}
         </div>
