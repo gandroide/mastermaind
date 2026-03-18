@@ -499,7 +499,6 @@ function BOMView({ blueprintId, materials, isEditing, onMaterialsChanged, onView
 }) {
   const [showAddRow, setShowAddRow] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
-  const [showPdfModal, setShowPdfModal] = useState(false);
 
   const handleDeleteMaterial = async (id: string) => {
     setDeleting(id);
@@ -524,12 +523,12 @@ function BOMView({ blueprintId, materials, isEditing, onMaterialsChanged, onView
           </div>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={() => setShowPdfModal(true)}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:text-white bg-white/5 hover:bg-white/10 rounded-md transition-colors cursor-pointer"
+          <a
+            href="/docs/SCH_BioAlert_Sch_V1_2026-03-18.pdf"
+            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:text-white bg-white/5 hover:bg-white/10 rounded-md transition-colors"
           >
             Ver Documento
-          </button>
+          </a>
           <a
             href="/docs/SCH_BioAlert_Sch_V1_2026-03-18.pdf"
             download
@@ -629,37 +628,6 @@ function BOMView({ blueprintId, materials, isEditing, onMaterialsChanged, onView
         )}
       </AnimatePresence>
 
-      {/* MODAL DEL VISOR DE PDF */}
-      {showPdfModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 bg-black/80 backdrop-blur-sm">
-          <div className="bg-[#0a1110] border border-white/10 rounded-xl w-full max-w-6xl h-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-
-            {/* Cabecera del Modal */}
-            <div className="flex items-center justify-between p-4 border-b border-white/10 bg-white/[0.02]">
-              <div className="flex items-center gap-2">
-                <FileText className="text-accent-bioalert w-5 h-5" />
-                <h3 className="text-sm font-medium text-white">Esquema Eléctrico - BioAlert</h3>
-              </div>
-              <button
-                onClick={() => setShowPdfModal(false)}
-                className="p-1.5 hover:bg-white/10 rounded-md text-zinc-400 hover:text-white transition-colors cursor-pointer"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* Contenedor del PDF (iframe nativo) */}
-            <div className="flex-1 w-full bg-white/5">
-              <iframe
-                src="/docs/SCH_BioAlert_Sch_V1_2026-03-18.pdf"
-                className="w-full h-full border-0 rounded-b-xl"
-                title="Esquema Eléctrico PDF"
-              />
-            </div>
-
-          </div>
-        </div>
-      )}
     </div>
   );
 }
