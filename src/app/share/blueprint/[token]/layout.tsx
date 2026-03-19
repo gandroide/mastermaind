@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 
 export default function ShareBlueprintLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-dvh bg-surface-0 text-text-primary">
+    <div className="h-dvh overflow-y-auto bg-surface-0 text-text-primary">
       {children}
     </div>
   );
