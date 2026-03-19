@@ -282,18 +282,18 @@ export default function BlueprintsPage() {
                           </div>
                           <div>
                             <h3 className="text-sm font-medium text-white">Esquema Eléctrico Principal</h3>
-                            <p className="text-xs text-zinc-400">SCH_BioAlert_Sch_V1_2026-03-18.pdf</p>
+                            <p className="text-xs text-zinc-400">SCH_BioAlert_Sch_V1_2026-03-19.pdf</p>
                           </div>
                         </div>
                         <div className="flex gap-2">
                           <a
-                            href="/docs/SCH_BioAlert_Sch_V1_2026-03-18.pdf"
+                            href="/docs/SCH_BioAlert_Sch_V1_2026-03-19.pdf"
                             className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:text-white bg-white/5 hover:bg-white/10 rounded-md transition-colors"
                           >
                             Ver Documento
                           </a>
                           <a
-                            href="/docs/SCH_BioAlert_Sch_V1_2026-03-18.pdf"
+                            href="/docs/SCH_BioAlert_Sch_V1_2026-03-19.pdf"
                             download
                             className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-accent-bioalert hover:bg-accent-bioalert/10 border border-accent-bioalert/20 rounded-md transition-colors"
                           >
