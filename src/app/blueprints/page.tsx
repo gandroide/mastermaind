@@ -16,6 +16,7 @@ import { getInventory } from '@/services/inventory';
 import type { Blueprint, BlueprintWithDetails, BlueprintMaterial, BlueprintPhase, InventoryItem } from '@/types/database';
 import SchematicViewerModal from '@/components/inventory/SchematicViewerModal';
 import ShareModal from '@/components/blueprints/ShareModal';
+import { getDatasheetForItem } from '@/utils/datasheetMap';
 import {
   BookOpen,
   Package,
@@ -595,12 +596,21 @@ function BOMView({ blueprintId, materials, isEditing, onMaterialsChanged, onView
                     <td className="py-3">
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-text-tertiary">{mat.notes ?? '—'}</span>
-                        {inv?.schematic_url && (
-                          <button onClick={() => onViewSchematic(inv.schematic_url!, `Esquema — ${mat.part_name}`)}
-                            className="shrink-0 cursor-pointer rounded-md bg-emerald-500/10 px-2 py-1 text-[10px] font-semibold text-emerald-400 transition-all hover:bg-emerald-500/20">
-                            <FileText size={10} className="mr-1 inline" />Esquema
-                          </button>
-                        )}
+                        {(() => {
+                          const ds = getDatasheetForItem(mat.part_name) ?? (inv ? getDatasheetForItem(inv.item_name) : null);
+                          const resolvedUrl = ds?.path ?? inv?.schematic_url;
+                          if (!resolvedUrl) return null;
+                          const resolvedTitle = ds
+                            ? `Datasheet — ${mat.part_name}`
+                            : `Esquema — ${mat.part_name}`;
+                          const resolvedLabel = ds ? 'Datasheet' : 'Esquema';
+                          return (
+                            <button onClick={() => onViewSchematic(resolvedUrl, resolvedTitle)}
+                              className="shrink-0 cursor-pointer rounded-md bg-emerald-500/10 px-2 py-1 text-[10px] font-semibold text-emerald-400 transition-all hover:bg-emerald-500/20">
+                              <FileText size={10} className="mr-1 inline" />{resolvedLabel}
+                            </button>
+                          );
+                        })()}
                       </div>
                     </td>
                     {isEditing && (

@@ -5,6 +5,7 @@ import type { InventoryItem } from '@/types/database';
 import { X, Package, FileText, ZoomIn, Pencil } from 'lucide-react';
 import { useState } from 'react';
 import SchematicViewerModal from '@/components/inventory/SchematicViewerModal';
+import { getDatasheetForItem } from '@/utils/datasheetMap';
 
 interface Props {
   item: InventoryItem;
@@ -15,6 +16,11 @@ interface Props {
 export default function InventoryDetailModal({ item, onClose, onEdit }: Props) {
   const [imageZoomed, setImageZoomed] = useState(false);
   const [schematicOpen, setSchematicOpen] = useState(false);
+
+  // Resolve local datasheet PDF (overrides schematic_url when available)
+  const datasheet = getDatasheetForItem(item.item_name);
+  const schematicUrl = datasheet?.path ?? item.schematic_url;
+  const schematicLabel = datasheet?.label ?? 'Ver Esquema';
 
   return (
     <>
@@ -125,8 +131,8 @@ export default function InventoryDetailModal({ item, onClose, onEdit }: Props) {
               </div>
             )}
 
-            {/* Schematic button — opens inline viewer */}
-            {item.schematic_url && (
+            {/* Schematic / Datasheet button — opens inline viewer */}
+            {schematicUrl && (
               <button
                 onClick={() => setSchematicOpen(true)}
                 className="flex min-h-[52px] w-full cursor-pointer items-center justify-center gap-3 rounded-2xl text-sm font-semibold text-text-inverse transition-all active:scale-[0.98] hover:scale-[1.02]"
@@ -136,7 +142,7 @@ export default function InventoryDetailModal({ item, onClose, onEdit }: Props) {
                 }}
               >
                 <FileText size={20} />
-                Ver Esquema
+                {schematicLabel}
               </button>
             )}
 
@@ -155,12 +161,12 @@ export default function InventoryDetailModal({ item, onClose, onEdit }: Props) {
         </div>
       </motion.div>
 
-      {/* Inline Schematic Viewer */}
+      {/* Inline Schematic / Datasheet Viewer */}
       <AnimatePresence>
-        {schematicOpen && item.schematic_url && (
+        {schematicOpen && schematicUrl && (
           <SchematicViewerModal
-            url={item.schematic_url}
-            title={`Esquema — ${item.item_name}`}
+            url={schematicUrl}
+            title={datasheet ? `Datasheet — ${item.item_name}` : `Esquema — ${item.item_name}`}
             onClose={() => setSchematicOpen(false)}
           />
         )}

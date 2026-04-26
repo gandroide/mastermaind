@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { InventoryItem } from '@/types/database';
 import SchematicViewerModal from '@/components/inventory/SchematicViewerModal';
 import { X, Package, MapPin, ZoomIn, FileText, Minus, Plus } from 'lucide-react';
+import { getDatasheetForItem } from '@/utils/datasheetMap';
 
 interface Props {
   item: InventoryItem;
@@ -16,6 +17,11 @@ interface Props {
 export default function InventoryDetailView({ item, onClose, isPublic, onUpdateQuantity }: Props) {
   const [imageZoomed, setImageZoomed] = useState(false);
   const [schematicOpen, setSchematicOpen] = useState(false);
+
+  // Resolve local datasheet PDF (overrides schematic_url when available)
+  const datasheet = getDatasheetForItem(item.item_name);
+  const schematicUrl = datasheet?.path ?? item.schematic_url;
+  const schematicLabel = datasheet?.label ?? 'Ver Esquema';
 
   return (
     <>
@@ -162,15 +168,15 @@ export default function InventoryDetailView({ item, onClose, isPublic, onUpdateQ
                 </div>
               )}
 
-              {/* Schematic button */}
-              {item.schematic_url && (
+              {/* Schematic / Datasheet button */}
+              {schematicUrl && (
                 <button
                   onClick={() => setSchematicOpen(true)}
                   className="flex min-h-[52px] w-full cursor-pointer items-center justify-center gap-3 rounded-2xl text-sm font-semibold text-text-inverse transition-all active:scale-[0.98] hover:scale-[1.01]"
                   style={{ background: 'linear-gradient(135deg, #34d399, #059669)' }}
                 >
                   <FileText size={20} />
-                  Ver Esquema
+                  {schematicLabel}
                 </button>
               )}
             </div>
@@ -178,12 +184,12 @@ export default function InventoryDetailView({ item, onClose, isPublic, onUpdateQ
         </motion.div>
       </div>
 
-      {/* Inline Schematic Viewer */}
+      {/* Inline Schematic / Datasheet Viewer */}
       <AnimatePresence>
-        {schematicOpen && item.schematic_url && (
+        {schematicOpen && schematicUrl && (
           <SchematicViewerModal
-            url={item.schematic_url}
-            title={`Esquema — ${item.item_name}`}
+            url={schematicUrl}
+            title={datasheet ? `Datasheet — ${item.item_name}` : `Esquema — ${item.item_name}`}
             onClose={() => setSchematicOpen(false)}
           />
         )}

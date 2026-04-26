@@ -11,6 +11,7 @@ import InventoryModal from '@/components/inventory/InventoryModal';
 import SchematicViewerModal from '@/components/inventory/SchematicViewerModal';
 import InventoryDetailView from '@/components/inventory/InventoryDetailView';
 import ShareInventoryModal from '@/components/inventory/ShareInventoryModal';
+import { getDatasheetForItem } from '@/utils/datasheetMap';
 import {
   Plus,
   Search,
@@ -404,23 +405,32 @@ export default function InventoryPage() {
                             <Pencil size={16} />
                             Editar
                           </button>
-                          {item.schematic_url && (
-                            <button
-                              onClick={() => {
-                                setSchematicViewer({ url: item.schematic_url!, title: `Esquema — ${item.item_name}` });
-                                setContextMenu(null);
-                              }}
-                              onTouchEnd={(e) => {
-                                e.stopPropagation();
-                                setSchematicViewer({ url: item.schematic_url!, title: `Esquema — ${item.item_name}` });
-                                setContextMenu(null);
-                              }}
-                              className="flex min-h-[44px] w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-3 text-sm text-text-secondary active:bg-danger/10 hover:bg-danger/5"
-                            >
-                              <ExternalLink size={16} />
-                              Ver Esquema
-                            </button>
-                          )}
+                          {(() => {
+                            const ds = getDatasheetForItem(item.item_name);
+                            const resolvedUrl = ds?.path ?? item.schematic_url;
+                            const resolvedTitle = ds
+                              ? `Datasheet — ${item.item_name}`
+                              : `Esquema — ${item.item_name}`;
+                            const resolvedLabel = ds?.label ?? 'Ver Esquema';
+
+                            return resolvedUrl ? (
+                              <button
+                                onClick={() => {
+                                  setSchematicViewer({ url: resolvedUrl, title: resolvedTitle });
+                                  setContextMenu(null);
+                                }}
+                                onTouchEnd={(e) => {
+                                  e.stopPropagation();
+                                  setSchematicViewer({ url: resolvedUrl, title: resolvedTitle });
+                                  setContextMenu(null);
+                                }}
+                                className="flex min-h-[44px] w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-3 text-sm text-text-secondary active:bg-danger/10 hover:bg-danger/5"
+                              >
+                                <ExternalLink size={16} />
+                                {resolvedLabel}
+                              </button>
+                            ) : null;
+                          })()}
                           <button
                             onClick={() => handleDelete(item.id, item.item_name)}
                             onTouchEnd={(e) => { e.stopPropagation(); handleDelete(item.id, item.item_name); }}
