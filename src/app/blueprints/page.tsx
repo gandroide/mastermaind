@@ -114,7 +114,7 @@ export default function BlueprintsPage() {
       {/* Header */}
       <motion.div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-text-primary">Hardware Blueprints</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-text-primary">Hardware Blueprints RAFAEL</h2>
           <p className="mt-1 text-sm text-text-secondary">
             Guías de ensamblaje y documentación técnica •{' '}
             <span style={{ color: activeConfig.color }}>{activeConfig.label}</span>
@@ -156,8 +156,8 @@ export default function BlueprintsPage() {
               glyphUrl = '/glyphs/edge_processing_glyph_1772133756791.png';
             } else if (nm.includes('health') || nm === 'bio-alert') {
               glyphUrl = '/glyphs/base_node_glyph_1772133744314.png';
-            } else if (nm.includes('data mule') || nm.includes('recolector')) {
-              glyphUrl = '/glyphs/data_mule_glyph.png';
+            // } else if (nm.includes('data mule') || nm.includes('recolector')) {
+            //   glyphUrl = '/glyphs/data_mule_glyph.png';
             } else if (nm.includes('net') || nm.includes('red') || nm.includes('mesh')) {
               glyphUrl = '/glyphs/mesh_network_glyph_1772133768410.png';
             } else if (nm.includes('power') || nm.includes('potencia')) {
